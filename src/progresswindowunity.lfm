@@ -1,0 +1,38 @@
+object ProgressWindow: TProgressWindow
+  Left = 1594
+  Height = 76
+  Top = 466
+  Width = 528
+  BorderIcons = []
+  BorderStyle = bsDialog
+  Caption = 'Progress'
+  ClientHeight = 76
+  ClientWidth = 528
+  DesignTimePPI = 80
+  FormStyle = fsStayOnTop
+  Position = poMainFormCenter
+  LCLVersion = '2.0.10.0'
+  object ProgressBar: TProgressBar
+    Left = 8
+    Height = 33
+    Top = 32
+    Width = 512
+    Step = 1
+    TabOrder = 0
+  end
+  object TextLabel: TLabel
+    Left = 8
+    Height = 14
+    Top = 8
+    Width = 512
+    AutoSize = False
+    ParentColor = False
+  end
+  object CounterTimer: TTimer
+    Enabled = False
+    Interval = 500
+    OnTimer = CounterTimerTimer
+    Left = 480
+    Top = 8
+  end
+end
