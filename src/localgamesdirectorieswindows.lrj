@@ -1,0 +1,7 @@
+{"version":1,"strings":[
+{"hash":33799619,"name":"tlocalgamesdirectoriesdialog.caption","sourcebytes":[76,111,99,97,108,32,71,97,109,101,115,32,68,105,114,101,99,116,111,114,105,101,115],"value":"Local Games Directories"},
+{"hash":18340,"name":"tlocalgamesdirectoriesdialog.adddirectorybitbtn.caption","sourcebytes":[65,100,100],"value":"Add"},
+{"hash":93079237,"name":"tlocalgamesdirectoriesdialog.adddirectorybitbtn1.caption","sourcebytes":[82,101,109,111,118,101],"value":"Remove"},
+{"hash":1371,"name":"tlocalgamesdirectoriesdialog.applybitbtn.caption","sourcebytes":[79,107],"value":"Ok"},
+{"hash":77089212,"name":"tlocalgamesdirectoriesdialog.cancelbitbtn.caption","sourcebytes":[67,97,110,99,101,108],"value":"Cancel"}
+]}

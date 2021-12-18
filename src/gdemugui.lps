@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="11"/>
+    <BuildModes Active="Release QT5">
+      <SessionMatrixOptions Count="2">
+        <Item1 ID="507908131922" Modes="Debug,Debug QT5,Release QT5" Type="IDEMacro" MacroName="LCLWidgetType" Value="qt5"/>
+        <Item2 ID="376046752009" Modes="Debug GTK,Release GTK" Type="IDEMacro" MacroName="LCLWidgetType" Value="gtk2"/>
+      </SessionMatrixOptions>
+    </BuildModes>
+    <Units Count="12">
+      <Unit0>
+        <Filename Value="gdemugui.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="4"/>
+        <CursorPos Y="31"/>
+        <UsageCount Value="207"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="mainwindowunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="MainWindow"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="mainWindowUnit"/>
+        <TopLine Value="187"/>
+        <CursorPos X="30" Y="192"/>
+        <UsageCount Value="207"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="localgamesdirectorieswindows.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="LocalGamesDirectoriesDialog"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="9"/>
+        <CursorPos X="10" Y="9"/>
+        <UsageCount Value="207"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="gdemuunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="5"/>
+        <TopLine Value="971"/>
+        <CursorPos X="52" Y="991"/>
+        <UsageCount Value="207"/>
+        <Loaded Value="True"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="progresswindowunity.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ProgressWindow"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="3"/>
+        <TopLine Value="35"/>
+        <CursorPos X="51" Y="42"/>
+        <UsageCount Value="202"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="/usr/share/fpcsrc/3.2.0/rtl/objpas/classes/classesh.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="67"/>
+        <CursorPos X="36" Y="953"/>
+        <UsageCount Value="1"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="/usr/lib/lazarus/2.0.10/lcl/include/customlistbox.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="479"/>
+        <CursorPos X="9" Y="501"/>
+        <UsageCount Value="1"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="/usr/lib/lazarus/2.0.10/lcl/interfaces/gtk2/gtk2widgetset.inc"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="25"/>
+        <CursorPos Y="46"/>
+        <UsageCount Value="1"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="/usr/lib/lazarus/2.0.10/lcl/lclmessageglue.pas"/>
+        <UnitName Value="LCLMessageGlue"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="94"/>
+        <CursorPos Y="116"/>
+        <UsageCount Value="4"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="/usr/lib/lazarus/2.0.10/lcl/forms.pp"/>
+        <UnitName Value="Forms"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="394"/>
+        <CursorPos X="3" Y="416"/>
+        <UsageCount Value="5"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="/usr/lib/lazarus/2.0.10/components/lazutils/uitypes.pas"/>
+        <UnitName Value="UITypes"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="3" Y="18"/>
+        <UsageCount Value="5"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="aboutwindowunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="AboutWindow"/>
+        <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="13"/>
+        <CursorPos X="28" Y="20"/>
+        <UsageCount Value="21"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+      </Unit11>
+    </Units>
+    <OtherDefines Count="1">
+      <Define0 Value="UseCThreads"/>
+    </OtherDefines>
+    <JumpHistory Count="30" HistoryIndex="29">
+      <Position1>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="280" Column="3" TopLine="278"/>
+      </Position1>
+      <Position2>
+        <Filename Value="gdemuunit.pas"/>
+        <Caret Line="162" Column="37" TopLine="142"/>
+      </Position2>
+      <Position3>
+        <Filename Value="gdemuunit.pas"/>
+        <Caret Line="746" Column="38" TopLine="742"/>
+      </Position3>
+      <Position4>
+        <Filename Value="gdemuunit.pas"/>
+        <Caret Line="117" Column="37" TopLine="96"/>
+      </Position4>
+      <Position5>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="293" Column="18" TopLine="278"/>
+      </Position5>
+      <Position6>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="89" Column="3" TopLine="87"/>
+      </Position6>
+      <Position7>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="190" Column="31" TopLine="156"/>
+      </Position7>
+      <Position8>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="270" Column="34" TopLine="259"/>
+      </Position8>
+      <Position9>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="258" Column="46" TopLine="242"/>
+      </Position9>
+      <Position10>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="162" Column="4" TopLine="156"/>
+      </Position10>
+      <Position11>
+        <Filename Value="gdemugui.lpr"/>
+        <Caret Line="30"/>
+      </Position11>
+      <Position12>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="173" Column="25" TopLine="157"/>
+      </Position12>
+      <Position13>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="197" Column="15" TopLine="157"/>
+      </Position13>
+      <Position14>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="12" Column="48"/>
+      </Position14>
+      <Position15>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="16" Column="48"/>
+      </Position15>
+      <Position16>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="17" Column="48"/>
+      </Position16>
+      <Position17>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="18" Column="48"/>
+      </Position17>
+      <Position18>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="19" Column="48"/>
+      </Position18>
+      <Position19>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="20" Column="48"/>
+      </Position19>
+      <Position20>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="21" Column="48"/>
+      </Position20>
+      <Position21>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="22" Column="48"/>
+      </Position21>
+      <Position22>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="21" Column="48"/>
+      </Position22>
+      <Position23>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="36" Column="83"/>
+      </Position23>
+      <Position24>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="37" Column="83"/>
+      </Position24>
+      <Position25>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="46" Column="83" TopLine="5"/>
+      </Position25>
+      <Position26>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="15" Column="42" TopLine="5"/>
+      </Position26>
+      <Position27>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="40" Column="83" TopLine="5"/>
+      </Position27>
+      <Position28>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="199" Column="74" TopLine="184"/>
+      </Position28>
+      <Position29>
+        <Filename Value="mainwindowunit.pas"/>
+        <Caret Line="206" Column="74" TopLine="186"/>
+      </Position29>
+      <Position30>
+        <Filename Value="aboutwindowunit.pas"/>
+        <Caret Line="19" Column="28" TopLine="13"/>
+      </Position30>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>
