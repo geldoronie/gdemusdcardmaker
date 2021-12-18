@@ -18,7 +18,6 @@ msgid "Source:"
 msgstr ""
 
 #: taboutwindow.label4.caption
-msgctxt "taboutwindow.label4.caption"
 msgid "MIT"
 msgstr ""
 
@@ -39,7 +38,6 @@ msgid "https://github.com/geldoronie/gdemusdcardmaker"
 msgstr ""
 
 #: taboutwindow.version.caption
-msgctxt "taboutwindow.version.caption"
 msgid "0.0.0"
 msgstr ""
 

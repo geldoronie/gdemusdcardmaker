@@ -2,7 +2,7 @@
 <CONFIG>
   <ProjectSession>
     <Version Value="11"/>
-    <BuildModes Active="Release QT5">
+    <BuildModes Active="Debug QT5">
       <SessionMatrixOptions Count="2">
         <Item1 ID="507908131922" Modes="Debug,Debug QT5,Release QT5" Type="IDEMacro" MacroName="LCLWidgetType" Value="qt5"/>
         <Item2 ID="376046752009" Modes="Debug GTK,Release GTK" Type="IDEMacro" MacroName="LCLWidgetType" Value="gtk2"/>
@@ -24,8 +24,9 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="mainWindowUnit"/>
+        <IsVisibleTab Value="True"/>
         <TopLine Value="187"/>
-        <CursorPos X="30" Y="192"/>
+        <CursorPos X="4" Y="190"/>
         <UsageCount Value="207"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
@@ -114,11 +115,10 @@
         <IsPartOfProject Value="True"/>
         <ComponentName Value="AboutWindow"/>
         <ResourceBaseClass Value="Form"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <TopLine Value="13"/>
-        <CursorPos X="28" Y="20"/>
-        <UsageCount Value="21"/>
+        <CursorPos X="143" Y="40"/>
+        <UsageCount Value="22"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit11>

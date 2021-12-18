@@ -3,4 +3,5 @@ cache/*
 **/backup/**
 **/lib/*
 *.pyc
-gdemugui
+*.bin
+*.debug
