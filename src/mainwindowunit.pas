@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, CheckLst, ExtCtrls,
   Menus, Buttons, StdCtrls, ComCtrls, localgamesdirectorieswindows, gdemuunit,
-  progresswindowunity, LCLType, aboutwindowunit;
+  progresswindowunity, LCLType, aboutwindowunit, openborcreatorwindowunit;
 
 type
 
@@ -18,6 +18,9 @@ type
     DownloadCoverMenuItem: TMenuItem;
     EditMenuItem: TMenuItem;
     CreditsMenuItem: TMenuItem;
+    DiskUseProgressBar: TProgressBar;
+    ToolsMenuItem: TMenuItem;
+    OpenBORDiscCreatorMenuItem: TMenuItem;
     UpdateSDCardGamesListMenuItem: TMenuItem;
     RemoveGamesFromSDCardMenuItem: TMenuItem;
     CopySelectedGamesToSDCardMenuItem: TMenuItem;
@@ -61,6 +64,7 @@ type
     procedure DownloadCoverMenuItemClick(Sender: TObject);
     procedure ExitMenuItemClick(Sender: TObject);
     procedure LocalGamesListSelectionChange(Sender: TObject; User: boolean);
+    procedure OpenBORDiscCreatorMenuItemClick(Sender: TObject);
     procedure RemoveGameFromSDCardBitBtnClick(Sender: TObject);
     procedure LoadSDCardBitBtnClick(Sender: TObject);
     procedure OpenLocalGamesDirectoriesDialogBitBtnClick(Sender: TObject);
@@ -251,6 +255,11 @@ begin
         SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
       end;
   end;
+end;
+
+procedure TMainWindow.OpenBORDiscCreatorMenuItemClick(Sender: TObject);
+begin
+  OpenBorCreatorWindow.ShowModal;
 end;
 
 procedure TMainWindow.RemoveGameFromSDCardBitBtnClick(Sender: TObject);

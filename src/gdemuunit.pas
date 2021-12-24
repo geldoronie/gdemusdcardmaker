@@ -63,6 +63,7 @@ type
     public
       constructor Create;
       procedure GenerateISO(dataPath: String; tempPath: String; outputPath: String);
+      procedure GenerateISO(name: String; ipBinPath: string; firstStReadBINPath: string; otherFiles: TStrings; outputPath: String);
     end;
 
     { TCDI4DC }
@@ -89,7 +90,6 @@ type
       function ExtractIPBIN(inputPath: String; outputPath: String): String;
     end;
 
-    //https://www.gamesdatabase.org/list.aspx?DM=0&searchtext=Crazy%20Taxi&searchtype=1&system=sega_dreamcast&sort=Game
     { TGameDatabaseSearch }
     TGameDatabaseSearch = class
       BaseUrl: String;
@@ -172,6 +172,7 @@ type
       procedure ClearSelectedSDCardGamesToRemove;
       procedure UpdateGDEmuINI;
       procedure CreateGDEmuImage;
+      procedure CreateOpenBORDisc(name: String; coverImagePath: string; mainPakFilePath: string; otherFilesPaths: TStrings; outputPath: string);
       procedure CreateInfoCacheFile(game: TGDEmuGame);
       function GetMetaFileInfo(game: TGDEmuGame): TGDEmuGame;
       function GetGameCover(game: TGDEmuGame): String;
@@ -183,6 +184,7 @@ var
 
 function GetGameName(GamePath: String): String;
 function GetGameSlugName(name: String): String;
+function GetGameLegalName(name: String): String;
 
 implementation
 
@@ -424,6 +426,59 @@ begin
   );
 end;
 
+procedure TGenISOImage.GenerateISO(name: String; ipBinPath: string; firstStReadBINPath: string; otherFiles: TStrings; outputPath: String);
+var
+  outputString: ansistring;
+  i: integer;
+  parameters: TStringList;
+  commandOut: TStringList;
+  shortName: String;
+begin
+  parameters:=TStringList.Create;
+  commandOut:=TStringList.Create;
+
+
+  if name.Length > 25 then
+  begin
+    shortName:=name.Substring(0,25);
+  end
+  else
+    shortName:=name;
+
+  parameters.AddStrings([
+    '-C',
+    '0,11702',
+    '-V',
+    '"'+ shortName + '"',
+    '-G',
+    ipBinPath,
+    '-r',
+    '-J',
+    '-l',
+    '-input-charset',
+    'iso8859-1',
+    '-o',
+    outputPath
+  ]);
+  parameters.Add(firstStReadBINPath );
+  for i:=0 to otherFiles.Count -1 do
+  begin
+    parameters.Add(otherFiles[i]);
+  end;
+  commandOut.AddStrings(parameters);
+  RunCommand(
+    Executable,
+    parameters.ToStringArray,
+    outputString,
+    [poStderrToOutPut,poWaitOnExit],
+    swoNone
+  );
+  commandOut.Add(outputString);
+  //commandOut.SaveToFile(ConcatPaths([ApplicationPath,'commands.out']));
+  commandOut.Destroy;
+  parameters.Destroy;
+end;
+
 { TCDI4DC }
 
 constructor TCDI4DC.Create;
@@ -521,6 +576,13 @@ begin
   slugName:=ReplaceRegExpr('[^.a-zA-Z0-9-\ ]+', name, '', False);
   slugName:=LowerCase(Trim(StringReplace(slugName, ' ', '-', [rfReplaceAll])));
   Result:=slugName;
+end;
+
+function GetGameLegalName(name: String): String;
+var legalName: String;
+begin
+  legalName:=ReplaceRegExpr('[^.a-zA-Z0-9-\ ]+', name, '', False);
+  Result:=Trim(legalName);
 end;
 
 procedure TGDEmu.Execute;
@@ -1171,6 +1233,45 @@ begin
     end;
   end;
   Result:=game;
+end;
+
+procedure TGDEmu.CreateOpenBORDisc(name: String; coverImagePath: string; mainPakFilePath: string; otherFilesPaths: TStrings; outputPath: string);
+var
+    otherFiles: TStringList;
+    legalName: String;
+    coverImage: TPicture;
+begin
+
+  coverImage:=TPicture.Create;
+  coverImage.LoadFromFile(coverImagePath);
+
+  legalName:=GetGameLegalName(name);
+  CreateDir(ConcatPaths([outputPath,legalName]));
+
+  coverImage.SaveToFile(ConcatPaths([outputPath,legalName,'cover.png']),'png');
+  CopyFile(mainPakFilePath,ConcatPaths([ApplicationPath,'temp','BOR.PAK']));
+
+  otherFiles:=TStringList.Create;
+  otherFiles.Add(ConcatPaths([ApplicationPath,'temp','BOR.PAK']));
+  otherFiles.Add(ConcatPaths([ApplicationPath,'data','openbor','IP.BIN']));
+  otherFiles.Add(coverImagePath);
+  otherFiles.AddStrings(otherFilesPaths);
+
+  GenISOImage.GenerateISO(
+    name,
+    ConcatPaths([ApplicationPath,'data','openbor','IP.BIN']),
+    ConcatPaths([ApplicationPath,'data','openbor','1ST_READ.BIN']),
+    otherFiles,
+    ConcatPaths([outputPath,legalName,'disc.iso'])
+  );
+
+  CDI4DC.ConvertToCDI(
+    ConcatPaths([outputPath,legalName,'disc.iso']),
+    ConcatPaths([outputPath,legalName,'disc.cdi'])
+  );
+
+  DeleteFile(ConcatPaths([outputPath,legalName,'disc.iso']));
+  DeleteFile(ConcatPaths([ApplicationPath,'temp','BOR.PAK']));
 end;
 
 end.

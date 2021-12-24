@@ -18,6 +18,8 @@
 {"hash":201480436,"name":"tmainwindow.openmenuitem.caption","sourcebytes":[38,79,112,101,110,32,83,68,32,67,97,114,100],"value":"&Open SD Card"},
 {"hash":134290019,"name":"tmainwindow.addlocalgamedirectoriesmenuitem.caption","sourcebytes":[38,65,100,100,32,76,111,99,97,108,32,71,97,109,101,115,32,68,105,114,101,99,116,111,114,105,101,115],"value":"&Add Local Games Directories"},
 {"hash":2805508,"name":"tmainwindow.exitmenuitem.caption","sourcebytes":[38,69,120,105,116],"value":"&Exit"},
+{"hash":5989939,"name":"tmainwindow.toolsmenuitem.caption","sourcebytes":[84,111,111,108,115],"value":"Tools"},
+{"hash":37707266,"name":"tmainwindow.openbordisccreatormenuitem.caption","sourcebytes":[79,112,101,110,32,66,79,82,32,68,105,115,99,32,67,114,101,97,116,111,114],"value":"Open BOR Disc Creator"},
 {"hash":310020,"name":"tmainwindow.editmenuitem.caption","sourcebytes":[69,100,105,116],"value":"Edit"},
 {"hash":221071316,"name":"tmainwindow.updatesdcardgameslistmenuitem.caption","sourcebytes":[38,85,112,100,97,116,101,32,83,68,32,67,97,114,100,32,71,97,109,101,115,32,76,105,115,116],"value":"&Update SD Card Games List"},
 {"hash":259949124,"name":"tmainwindow.removegamesfromsdcardmenuitem.caption","sourcebytes":[38,82,101,109,111,118,101,32,71,97,109,101,32,70,114,111,109,32,83,68,32,67,97,114,100],"value":"&Remove Game From SD Card"},

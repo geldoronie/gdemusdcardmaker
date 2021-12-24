@@ -22,7 +22,7 @@
       <UseVersionInfo Value="True"/>
       <AutoIncrementBuild Value="True"/>
       <RevisionNr Value="1"/>
-      <BuildNr Value="11"/>
+      <BuildNr Value="14"/>
       <StringTable CompanyName="OpenSource" FileDescription="Executable" InternalName="gdemugui" LegalCopyright="MIT Licence" OriginalFilename="gdemugui"/>
     </VersionInfo>
     <MacroValues Count="2">
@@ -157,7 +157,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="7">
       <Unit0>
         <Filename Value="gdemugui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -192,8 +192,16 @@
         <Filename Value="aboutwindowunit.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="AboutWindow"/>
+        <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="openborcreatorwindowunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="OpenBorCreatorWindow"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

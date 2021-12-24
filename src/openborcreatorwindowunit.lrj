@@ -1,0 +1,14 @@
+{"version":1,"strings":[
+{"hash":125555986,"name":"topenborcreatorwindow.caption","sourcebytes":[79,112,101,110,32,66,79,82,32,68,105,115,99,32,77,97,107,101,114],"value":"Open BOR Disc Maker"},
+{"hash":125555986,"name":"topenborcreatorwindow.label1.caption","sourcebytes":[79,112,101,110,32,66,79,82,32,68,105,115,99,32,77,97,107,101,114],"value":"Open BOR Disc Maker"},
+{"hash":78166181,"name":"topenborcreatorwindow.createbitbtn.caption","sourcebytes":[67,114,101,97,116,101],"value":"Create"},
+{"hash":5538698,"name":"topenborcreatorwindow.gamenamelabelededit.editlabel.caption","sourcebytes":[78,97,109,101,58],"value":"Name:"},
+{"hash":95489461,"name":"topenborcreatorwindow.gamenamelabelededit.text","sourcebytes":[89,111,117,114,32,71,97,109,101,32,78,97,109,101],"value":"Your Game Name"},
+{"hash":6664650,"name":"topenborcreatorwindow.coverimagepathlabelededit.editlabel.caption","sourcebytes":[67,111,118,101,114,32,73,109,97,103,101,58],"value":"Cover Image:"},
+{"hash":107745630,"name":"topenborcreatorwindow.openconverimagebitbtn.caption","sourcebytes":[79,112,101,110,46,46,46],"value":"Open..."},
+{"hash":88912874,"name":"topenborcreatorwindow.mainpakfilelabelededit.editlabel.caption","sourcebytes":[77,97,105,110,32,80,65,75,32,70,105,108,101,58],"value":"Main PAK File:"},
+{"hash":107745630,"name":"topenborcreatorwindow.openconverimagebitbtn1.caption","sourcebytes":[79,112,101,110,46,46,46],"value":"Open..."},
+{"hash":27705386,"name":"topenborcreatorwindow.label2.caption","sourcebytes":[79,116,104,101,114,32,70,105,108,101,115,58],"value":"Other Files:"},
+{"hash":127472186,"name":"topenborcreatorwindow.outputdirlabelededit.editlabel.caption","sourcebytes":[79,117,116,112,117,116,32,68,105,114,101,99,116,111,114,121,58],"value":"Output Directory:"},
+{"hash":107745630,"name":"topenborcreatorwindow.outputdirbitbtn.caption","sourcebytes":[79,112,101,110,46,46,46],"value":"Open..."}
+]}
