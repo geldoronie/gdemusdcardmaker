@@ -17,7 +17,7 @@ object LocalGamesDirectoriesDialog: TLocalGamesDirectoriesDialog
     Width = 570
     Align = alClient
     ItemHeight = 0
-    ScrollWidth = 568
+    ScrollWidth = 566
     TabOrder = 0
     TopIndex = -1
   end

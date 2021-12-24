@@ -125,6 +125,10 @@ msgctxt "tmainwindow.localgamepathlabel.caption"
 msgid "Path:"
 msgstr ""
 
+#: tmainwindow.openbordisccreatormenuitem.caption
+msgid "Open BOR Disc Creator"
+msgstr ""
+
 #: tmainwindow.openlocalgamesdirectoriesdialogbitbtn.hint
 msgid "Open Local Game Folders"
 msgstr ""
@@ -165,6 +169,10 @@ msgctxt "tmainwindow.sdcardgamepathlabel.caption"
 msgid "Path:"
 msgstr ""
 
+#: tmainwindow.toolsmenuitem.caption
+msgid "Tools"
+msgstr ""
+
 #: tmainwindow.updategameslistsdcardbitbtn.hint
 msgid "Refresh Games List"
 msgstr ""
@@ -175,6 +183,60 @@ msgstr ""
 
 #: tmainwindow.viewmenuitem.caption
 msgid "&View"
+msgstr ""
+
+#: topenborcreatorwindow.caption
+msgctxt "topenborcreatorwindow.caption"
+msgid "Open BOR Disc Maker"
+msgstr ""
+
+#: topenborcreatorwindow.coverimagepathlabelededit.editlabel.caption
+msgid "Cover Image:"
+msgstr ""
+
+#: topenborcreatorwindow.createbitbtn.caption
+msgid "Create"
+msgstr ""
+
+#: topenborcreatorwindow.gamenamelabelededit.editlabel.caption
+msgctxt "topenborcreatorwindow.gamenamelabelededit.editlabel.caption"
+msgid "Name:"
+msgstr ""
+
+#: topenborcreatorwindow.gamenamelabelededit.text
+msgid "Your Game Name"
+msgstr ""
+
+#: topenborcreatorwindow.label1.caption
+msgctxt "topenborcreatorwindow.label1.caption"
+msgid "Open BOR Disc Maker"
+msgstr ""
+
+#: topenborcreatorwindow.label2.caption
+msgid "Other Files:"
+msgstr ""
+
+#: topenborcreatorwindow.mainpakfilelabelededit.editlabel.caption
+msgid "Main PAK File:"
+msgstr ""
+
+#: topenborcreatorwindow.openconverimagebitbtn.caption
+msgctxt "topenborcreatorwindow.openconverimagebitbtn.caption"
+msgid "Open..."
+msgstr ""
+
+#: topenborcreatorwindow.openconverimagebitbtn1.caption
+msgctxt "topenborcreatorwindow.openconverimagebitbtn1.caption"
+msgid "Open..."
+msgstr ""
+
+#: topenborcreatorwindow.outputdirbitbtn.caption
+msgctxt "topenborcreatorwindow.outputdirbitbtn.caption"
+msgid "Open..."
+msgstr ""
+
+#: topenborcreatorwindow.outputdirlabelededit.editlabel.caption
+msgid "Output Directory:"
 msgstr ""
 
 #: tprogresswindow.caption

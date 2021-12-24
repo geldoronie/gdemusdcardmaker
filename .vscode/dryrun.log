@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/geldo/Projects/GDEMUGUI'
+make: Leaving directory '/home/geldo/Projects/GDEMUGUI'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+ 
