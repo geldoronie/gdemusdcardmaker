@@ -1,0 +1,245 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+#: taboutwindow.caption
+msgid "About"
+msgstr ""
+
+#: taboutwindow.label1.caption
+msgid "GDEmu SDCard Maker GUI"
+msgstr ""
+
+#: taboutwindow.label2.caption
+msgid "Licence: "
+msgstr ""
+
+#: taboutwindow.label3.caption
+msgid "Source:"
+msgstr ""
+
+#: taboutwindow.label4.caption
+msgid "MIT"
+msgstr ""
+
+#: taboutwindow.label5.caption
+msgid "Version:"
+msgstr ""
+
+#: taboutwindow.label6.caption
+msgid "Colaborators:"
+msgstr ""
+
+#: taboutwindow.okbitbtn.caption
+msgid "OK"
+msgstr ""
+
+#: taboutwindow.statictext1.caption
+msgid "https://github.com/geldoronie/gdemusdcardmaker"
+msgstr ""
+
+#: taboutwindow.version.caption
+msgid "0.0.0"
+msgstr ""
+
+#: tlocalgamesdirectoriesdialog.adddirectorybitbtn.caption
+msgid "Add"
+msgstr ""
+
+#: tlocalgamesdirectoriesdialog.adddirectorybitbtn1.caption
+msgid "Remove"
+msgstr ""
+
+#: tlocalgamesdirectoriesdialog.applybitbtn.caption
+msgid "Ok"
+msgstr ""
+
+#: tlocalgamesdirectoriesdialog.cancelbitbtn.caption
+msgid "Cancel"
+msgstr ""
+
+#: tlocalgamesdirectoriesdialog.caption
+msgid "Local Games Directories"
+msgstr ""
+
+#: tmainwindow.aboutmenuitem.caption
+msgid "A&bout"
+msgstr ""
+
+#: tmainwindow.addlocalgamedirectoriesmenuitem.caption
+msgid "&Add Local Games Directories"
+msgstr ""
+
+#: tmainwindow.caption
+msgid "GDEMU GUI"
+msgstr ""
+
+#: tmainwindow.copyselectedbitbtn.hint
+msgid "Copy Selected"
+msgstr ""
+
+#: tmainwindow.copyselectedgamestosdcardmenuitem.caption
+msgid "&Copy Selected Games to SD Card"
+msgstr ""
+
+#: tmainwindow.creditsmenuitem.caption
+msgid "Credits"
+msgstr ""
+
+#: tmainwindow.downloadcovermenuitem.caption
+msgid "Download Cover"
+msgstr ""
+
+#: tmainwindow.editmenuitem.caption
+msgid "Edit"
+msgstr ""
+
+#: tmainwindow.exitmenuitem.caption
+msgid "&Exit"
+msgstr ""
+
+#: tmainwindow.filemenuitem.caption
+msgid "&File"
+msgstr ""
+
+#: tmainwindow.loadsdcardbitbtn.hint
+msgid "Load SD Card"
+msgstr ""
+
+#: tmainwindow.localgamedisctypelabel.caption
+msgctxt "tmainwindow.localgamedisctypelabel.caption"
+msgid "Extenstion:"
+msgstr ""
+
+#: tmainwindow.localgamemd5label.caption
+msgctxt "tmainwindow.localgamemd5label.caption"
+msgid "MD5:"
+msgstr ""
+
+#: tmainwindow.localgamenamelabel.caption
+msgctxt "tmainwindow.localgamenamelabel.caption"
+msgid "Name:"
+msgstr ""
+
+#: tmainwindow.localgamepathlabel.caption
+msgctxt "tmainwindow.localgamepathlabel.caption"
+msgid "Path:"
+msgstr ""
+
+#: tmainwindow.openbordisccreatormenuitem.caption
+msgid "Open BOR Disc Creator"
+msgstr ""
+
+#: tmainwindow.openlocalgamesdirectoriesdialogbitbtn.hint
+msgid "Open Local Game Folders"
+msgstr ""
+
+#: tmainwindow.openmenuitem.caption
+msgid "&Open SD Card"
+msgstr ""
+
+#: tmainwindow.removegamefromsdcardbitbtn.hint
+msgid "Remove from SD Card"
+msgstr ""
+
+#: tmainwindow.removegamesfromsdcardmenuitem.caption
+msgid "&Remove Game From SD Card"
+msgstr ""
+
+#: tmainwindow.sdcardgamedisctypelabel.caption
+msgctxt "tmainwindow.sdcardgamedisctypelabel.caption"
+msgid "Extenstion:"
+msgstr ""
+
+#: tmainwindow.sdcardgameindexlabel.caption
+msgid "Index:"
+msgstr ""
+
+#: tmainwindow.sdcardgamemd5label.caption
+msgctxt "tmainwindow.sdcardgamemd5label.caption"
+msgid "MD5:"
+msgstr ""
+
+#: tmainwindow.sdcardgamenamelabel.caption
+msgctxt "tmainwindow.sdcardgamenamelabel.caption"
+msgid "Name:"
+msgstr ""
+
+#: tmainwindow.sdcardgamepathlabel.caption
+msgctxt "tmainwindow.sdcardgamepathlabel.caption"
+msgid "Path:"
+msgstr ""
+
+#: tmainwindow.toolsmenuitem.caption
+msgid "Tools"
+msgstr ""
+
+#: tmainwindow.updategameslistsdcardbitbtn.hint
+msgid "Refresh Games List"
+msgstr ""
+
+#: tmainwindow.updatesdcardgameslistmenuitem.caption
+msgid "&Update SD Card Games List"
+msgstr ""
+
+#: tmainwindow.viewmenuitem.caption
+msgid "&View"
+msgstr ""
+
+#: topenborcreatorwindow.caption
+msgctxt "topenborcreatorwindow.caption"
+msgid "Open BOR Disc Maker"
+msgstr ""
+
+#: topenborcreatorwindow.coverimagepathlabelededit.editlabel.caption
+msgid "Cover Image:"
+msgstr ""
+
+#: topenborcreatorwindow.createbitbtn.caption
+msgid "Create"
+msgstr ""
+
+#: topenborcreatorwindow.gamenamelabelededit.editlabel.caption
+msgctxt "topenborcreatorwindow.gamenamelabelededit.editlabel.caption"
+msgid "Name:"
+msgstr ""
+
+#: topenborcreatorwindow.gamenamelabelededit.text
+msgid "Your Game Name"
+msgstr ""
+
+#: topenborcreatorwindow.label1.caption
+msgctxt "topenborcreatorwindow.label1.caption"
+msgid "Open BOR Disc Maker"
+msgstr ""
+
+#: topenborcreatorwindow.label2.caption
+msgid "Other Files:"
+msgstr ""
+
+#: topenborcreatorwindow.mainpakfilelabelededit.editlabel.caption
+msgid "Main PAK File:"
+msgstr ""
+
+#: topenborcreatorwindow.openconverimagebitbtn.caption
+msgctxt "topenborcreatorwindow.openconverimagebitbtn.caption"
+msgid "Open..."
+msgstr ""
+
+#: topenborcreatorwindow.openconverimagebitbtn1.caption
+msgctxt "topenborcreatorwindow.openconverimagebitbtn1.caption"
+msgid "Open..."
+msgstr ""
+
+#: topenborcreatorwindow.outputdirbitbtn.caption
+msgctxt "topenborcreatorwindow.outputdirbitbtn.caption"
+msgid "Open..."
+msgstr ""
+
+#: topenborcreatorwindow.outputdirlabelededit.editlabel.caption
+msgid "Output Directory:"
+msgstr ""
+
+#: tprogresswindow.caption
+msgid "Progress"
+msgstr ""
+
