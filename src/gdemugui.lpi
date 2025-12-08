@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="11"/>
+    <Version Value="12"/>
     <General>
+      <Flags>
+        <CompatibilityMode Value="True"/>
+      </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="GDEmu Creator"/>
       <Scaled Value="True"/>
       <ResourceType Value="res"/>
@@ -22,7 +24,7 @@
       <UseVersionInfo Value="True"/>
       <AutoIncrementBuild Value="True"/>
       <RevisionNr Value="1"/>
-      <BuildNr Value="14"/>
+      <BuildNr Value="15"/>
       <StringTable CompanyName="OpenSource" FileDescription="Executable" InternalName="gdemugui" LegalCopyright="MIT Licence" OriginalFilename="gdemugui"/>
     </VersionInfo>
     <MacroValues Count="2">
@@ -82,6 +84,9 @@
             <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
           </SearchPaths>
           <Linking>
+            <Debugging>
+              <DebugInfoType Value="dsDwarf3"/>
+            </Debugging>
             <Options>
               <LinkerOptions Value="--pointer-arithmetic"/>
               <Win32>
@@ -150,14 +155,13 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="1">
       <Item1>
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="7">
+    <Units Count="8">
       <Unit0>
         <Filename Value="gdemugui.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -202,6 +206,13 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit6>
+      <Unit7>
+        <Filename Value="commandlogwindowunit.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="CommandLogWindow"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+      </Unit7>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -214,6 +225,9 @@
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf3"/>
+      </Debugging>
       <Options>
         <LinkerOptions Value="--pointer-arithmetic"/>
         <Win32>
@@ -233,7 +247,7 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="4">
+    <Exceptions Count="7">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -246,6 +260,15 @@
       <Item4>
         <Name Value="Unknown"/>
       </Item4>
+      <Item5>
+        <Name Value="EHTTPClient"/>
+      </Item5>
+      <Item6>
+        <Name Value="FPImageException"/>
+      </Item6>
+      <Item7>
+        <Name Value="EProcess"/>
+      </Item7>
     </Exceptions>
   </Debugging>
 </CONFIG>

@@ -8,7 +8,8 @@ uses
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, mainWindowUnit, localgamesdirectorieswindows, gdemuunit,
-  progresswindowunity, sysutils, aboutwindowunit, openborcreatorwindowunit
+  progresswindowunity, sysutils, aboutwindowunit, openborcreatorwindowunit,
+  commandlogwindowunit
   { you can add units after this };
 
 {$R *.res}
@@ -28,6 +29,7 @@ begin
     ProgressWindow);
   Application.CreateForm(TAboutWindow, AboutWindow);
   Application.CreateForm(TOpenBorCreatorWindow, OpenBorCreatorWindow);
+  Application.CreateForm(TCommandLogWindow, CommandLogWindow);
   Application.Run;
 end.
 

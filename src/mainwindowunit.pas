@@ -7,7 +7,8 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, CheckLst, ExtCtrls,
   Menus, Buttons, StdCtrls, ComCtrls, localgamesdirectorieswindows, gdemuunit,
-  progresswindowunity, LCLType, aboutwindowunit, openborcreatorwindowunit;
+  progresswindowunity, LCLType, aboutwindowunit, openborcreatorwindowunit,
+  commandlogwindowunit;
 
 type
 
@@ -84,6 +85,7 @@ var
 procedure OnFinishGamesCopy;
 procedure OnFinishSDCardGamesScan;
 procedure OnFinishLocalGamesScan;
+procedure UpdateSDCardGameListWithProgress;
 
 implementation
 
@@ -114,7 +116,6 @@ procedure TMainWindow.SDCardListSelectionChange(Sender: TObject; User: boolean);
 var
     coverImageFilename: String;
 begin
-  User:=False;
   if GDEmu.SDCardGamesListCount > 0 then
   begin
     SDCardGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.SDCardGamesList[SDCardList.ItemIndex].Extension);
@@ -295,7 +296,36 @@ begin
         SDCardList.AddItem(GDEmu.SDCardGamesList[i].Name,nil);
       end;
     end;
+    UpdateSDCardGameListWithProgress;
+  end;
+end;
+
+procedure UpdateSDCardGameListWithProgress;
+begin
+  if GDEmu.SDCardLoaded then
+  begin
+    // Limpar log anterior
+    GDEmu.ClearCommandLog;
+    
+    // Mostrar janela de progresso simples
+    ProgressWindow.SetTitle('Updating GDEmu Game List');
+    ProgressWindow.SetMax(100);
+    ProgressWindow.ProgressBar.Position:=0;
+    ProgressWindow.TextLabel.Caption:='Generating menu CDI...';
+    ProgressWindow.ShowProgress;
+    MainWindow.Enabled:=False;
+    Application.ProcessMessages;
+    
+    // Executar atualização (isso vai gerar logs dos comandos)
+    // Os comandos vão registrar logs automaticamente via RunCommandWithLog
     GDEmu.UpdateSDCardGameList;
+    
+    // Fechar janela de progresso
+    ProgressWindow.CloseProgress;
+    MainWindow.Enabled:=True;
+    
+    // Mostrar janela de log modal com os resultados
+    CommandLogWindow.ShowLog('GDEmu Game List Update - Command Log', GDEmu.GetCommandLog);
   end;
 end;
 
@@ -303,7 +333,7 @@ procedure TMainWindow.UpdateGamesListSDCardBitBtnClick(Sender: TObject);
 begin
   if GDEmu.SDCardLoaded then
   begin
-    GDEmu.UpdateSDCardGameList;
+    UpdateSDCardGameListWithProgress;
     ShowMessage('GDEmu Game list has updated!');
     //GDEmu.ScanSDCardGamesDirectory;
     //SDCardList.Clear;
@@ -322,7 +352,8 @@ end;
 procedure OnFinishGamesCopy;
 var i: integer;
 begin
-  GDEmu.UpdateSDCardGameList;
+  // UpdateSDCardGameList já foi chamado com progresso durante a cópia
+  // Não precisa chamar novamente aqui, mas vamos manter para garantir
   GDEmu.ScanSDCardGamesDirectory;
   MainWindow.SDCardList.Clear;
   for i:=0 to GDEmu.SDCardGamesListCount -1 do
