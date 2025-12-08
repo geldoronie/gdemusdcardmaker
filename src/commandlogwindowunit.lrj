@@ -1,0 +1,4 @@
+{"version":1,"strings":[
+{"hash":135018343,"name":"tcommandlogwindow.caption","sourcebytes":[67,111,109,109,97,110,100,32,76,111,103],"value":"Command Log"},
+{"hash":143913943,"name":"tcommandlogwindow.titlelabel.caption","sourcebytes":[67,111,109,109,97,110,100,32,69,120,101,99,117,116,105,111,110,32,76,111,103],"value":"Command Execution Log"}
+]}

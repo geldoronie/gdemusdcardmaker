@@ -1,0 +1,51 @@
+object CommandLogWindow: TCommandLogWindow
+  Left = 3410
+  Height = 600
+  Top = 255
+  Width = 900
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Command Log'
+  ClientHeight = 600
+  ClientWidth = 900
+  Position = poMainFormCenter
+  LCLVersion = '4.2.0.0'
+  object TitleLabel: TLabel
+    Left = 0
+    Height = 23
+    Top = 0
+    Width = 900
+    Align = alTop
+    Alignment = taCenter
+    Caption = 'Command Execution Log'
+    Font.Height = -16
+    Font.Style = [fsBold]
+    ParentColor = False
+    ParentFont = False
+  end
+  object LogMemo: TMemo
+    Left = 10
+    Height = 520
+    Top = 35
+    Width = 880
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'Courier New'
+    Font.Pitch = fpFixed
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssBoth
+    TabOrder = 0
+  end
+  object OkBitBtn: TBitBtn
+    Left = 405
+    Height = 30
+    Top = 560
+    Width = 90
+    Anchors = [akBottom]
+    Kind = bkOK
+    ModalResult = 1
+    TabOrder = 1
+  end
+end
