@@ -11,6 +11,9 @@ uses
 
 type
 
+    { Forward declarations }
+    TGDEmu = class;
+
     { TGDEmuGame }
     TGDEmuGame = class
       Id: String;
@@ -36,8 +39,10 @@ type
     private
       ExecutablePath: String;
       Executable: String;
+      GDEmuInstance: TGDEmu;
     public
       constructor Create;
+      procedure SetGDEmuInstance(instance: TGDEmu);
       function GetIPBINInfo(sdCardGame: TGDEmuGame; outputDir: string): TGDEmuGame;
     end;
 
@@ -48,8 +53,10 @@ type
       ApplicationPath: String;
       ExecutablePath: String;
       Executable: String;
+      GDEmuInstance: TGDEmu;
     public
       constructor Create;
+      procedure SetGDEmuInstance(instance: TGDEmu);
       function GetMetaFile(GamePath: String; outputPath: String): String;
     end;
 
@@ -60,8 +67,10 @@ type
       ApplicationPath: String;
       ExecutablePath: String;
       Executable: String;
+      GDEmuInstance: TGDEmu;
     public
       constructor Create;
+      procedure SetGDEmuInstance(instance: TGDEmu);
       procedure GenerateISO(dataPath: String; tempPath: String; outputPath: String);
       procedure GenerateISO(name: String; ipBinPath: string; firstStReadBINPath: string; otherFiles: TStrings; outputPath: String);
     end;
@@ -73,8 +82,10 @@ type
       ApplicationPath: String;
       ExecutablePath: String;
       Executable: String;
+      GDEmuInstance: TGDEmu;
     public
       constructor Create;
+      procedure SetGDEmuInstance(instance: TGDEmu);
       procedure ConvertToCDI(inputPath: String; outputPath: String);
     end;
 
@@ -85,8 +96,10 @@ type
       ApplicationPath: String;
       ExecutablePath: String;
       Executable: String;
+      GDEmuInstance: TGDEmu;
     public
       constructor Create;
+      procedure SetGDEmuInstance(instance: TGDEmu);
       function ExtractIPBIN(inputPath: String; outputPath: String): String;
     end;
 
@@ -114,7 +127,9 @@ type
       _onFinishGamesCopy: PStartCopySelectedLocalGamesToSDCard;
       _onFinishLocalGamesScan: PStartScanLocalGamesDirectories;
       _onFinishSDCardGamesScan: PStartScanSDCardGamesDirectories;
+      CommandLog: TStringList;
       procedure UpdateSDCardGameInfo(index: integer);
+      procedure AddCommandLog(const command: String; const output: String);
     public
       ApplicationPath: String;
       GDIToolsPath: String;
@@ -177,6 +192,8 @@ type
       function GetMetaFileInfo(game: TGDEmuGame): TGDEmuGame;
       function GetGameCover(game: TGDEmuGame): String;
       function GetMetaFileInfoCache(game: TGDEmuGame): TGDEmuGame;
+      function GetCommandLog: TStringList;
+      procedure ClearCommandLog;
     end;
 
 var
@@ -188,12 +205,42 @@ function GetGameLegalName(name: String): String;
 
 implementation
 
+// Helper function to run command with logging
+function RunCommandWithLog(const Executable: String; const Params: array of String; out OutputString: ansistring; Options: TProcessOptions = []; SWOptions: TShowWindowOptions = swoNone; GDEmuInstance: TGDEmu = nil): Boolean;
+var
+  commandLine: String;
+  i: integer;
+begin
+  commandLine:=Executable;
+  for i:=0 to High(Params) do
+    commandLine:=commandLine + ' ' + Params[i];
+  
+  Result:=RunCommand(Executable, Params, OutputString, Options, SWOptions);
+  
+  if GDEmuInstance <> nil then
+  begin
+    GDEmuInstance.AddCommandLog(commandLine, OutputString);
+  end
+  else
+  begin
+    WriteLn('[', FormatDateTime('hh:nn:ss', Now), '] ', commandLine);
+    if OutputString <> '' then
+      WriteLn(OutputString);
+  end;
+end;
+
 { THexDump }
 
 constructor THexDump.Create;
 begin
   ExecutablePath:='';
   Executable:='/usr/bin/hexdump';
+  GDEmuInstance:=nil;
+end;
+
+procedure THexDump.SetGDEmuInstance(instance: TGDEmu);
+begin
+  GDEmuInstance:=instance;
 end;
 
 function THexDump.GetIPBINInfo(sdCardGame: TGDEmuGame; outputDir: string): TGDEmuGame;
@@ -207,7 +254,7 @@ var
   catalogID: ansistring;
 begin
   //INTERNAL NAME
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -221,10 +268,11 @@ begin
     ],
     internalName,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   //DISC
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -238,10 +286,11 @@ begin
     ],
     disc,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   //VGA
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -255,10 +304,11 @@ begin
     ],
     vga,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   //REGION
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -272,10 +322,11 @@ begin
     ],
     region,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   //VERSION
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -289,10 +340,11 @@ begin
     ],
     version,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   //DATE
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -306,10 +358,11 @@ begin
     ],
     date,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   //CATALOG ID
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       '-v',
@@ -323,7 +376,8 @@ begin
     ],
     catalogID,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   sdCardGame.Id:=MD5Print(MD5File(ConcatPaths([outputDir,'ip.bin'])));
   sdCardGame.Disc:=Trim(disc);
@@ -366,13 +420,19 @@ constructor TGDIToolsProcess.Create;
 begin
   ExecutablePath:='gditools.py';
   Executable:='/usr/bin/python';
+  GDEmuInstance:=nil;
+end;
+
+procedure TGDIToolsProcess.SetGDEmuInstance(instance: TGDEmu);
+begin
+  GDEmuInstance:=instance;
 end;
 
 function TGDIToolsProcess.GetMetaFile(GamePath: String; outputPath: String): String;
 var
   outputString: ansistring;
 begin
-  RunCommand(
+  RunCommandWithLog(
     Executable,
     [
       ConcatPaths([ApplicationPath,'tools',ExecutablePath]),
@@ -383,7 +443,8 @@ begin
     ],
     outputString,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   Result:=outputString;
 end;
@@ -392,8 +453,14 @@ end;
 
 constructor TGenISOImage.Create;
 begin
-  ExecutablePath:='';
-  Executable:='/usr/bin/genisoimage';
+  ExecutablePath:='genisoimage';
+  Executable:='tools/genisoimage';
+  GDEmuInstance:=nil;
+end;
+
+procedure TGenISOImage.SetGDEmuInstance(instance: TGDEmu);
+begin
+  GDEmuInstance:=instance;
 end;
 
 procedure TGenISOImage.GenerateISO(dataPath: String; tempPath: String; outputPath: String);
@@ -401,8 +468,8 @@ var
   outputString: ansistring;
 begin
   //genisoimage -C 0,11702 -V GDMENU -G data/ip.bin -r -J -l -input-charset iso8859-1 -o gdmenu.iso data/1ST_READ.BIN $GDMENU_INI
-  RunCommand(
-    Executable,
+  RunCommandWithLog(
+    ConcatPaths([ApplicationPath, Executable]),
     [
       '-C',
       '0,11702',
@@ -422,7 +489,8 @@ begin
     ],
     outputString,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
 end;
 
@@ -466,12 +534,13 @@ begin
     parameters.Add(otherFiles[i]);
   end;
   commandOut.AddStrings(parameters);
-  RunCommand(
-    Executable,
+  RunCommandWithLog(
+    ConcatPaths([ApplicationPath, Executable]),
     parameters.ToStringArray,
     outputString,
     [poStderrToOutPut,poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
   commandOut.Add(outputString);
   //commandOut.SaveToFile(ConcatPaths([ApplicationPath,'commands.out']));
@@ -485,13 +554,19 @@ constructor TCDI4DC.Create;
 begin
   ExecutablePath:='';
   Executable:='tools/cdi4dc';
+  GDEmuInstance:=nil;
+end;
+
+procedure TCDI4DC.SetGDEmuInstance(instance: TGDEmu);
+begin
+  GDEmuInstance:=instance;
 end;
 
 procedure TCDI4DC.ConvertToCDI(inputPath: String; outputPath: String);
 var
   outputString: ansistring;
 begin
-  RunCommand(
+  RunCommandWithLog(
     ConcatPaths([ApplicationPath,Executable]),
     [
       inputPath,
@@ -499,7 +574,8 @@ begin
     ],
     outputString,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
 end;
 
@@ -509,6 +585,12 @@ constructor TCDIRIP.Create;
 begin
   ExecutablePath:='';
   Executable:='tools/cdirip';
+  GDEmuInstance:=nil;
+end;
+
+procedure TCDIRIP.SetGDEmuInstance(instance: TGDEmu);
+begin
+  GDEmuInstance:=instance;
 end;
 
 function TCDIRIP.ExtractIPBIN(inputPath: String; outputPath: String): String;
@@ -523,7 +605,7 @@ begin
   cacheFiles:=TStringList.Create;
   DeleteDirectory(ConcatPaths([outputPath,'cdicache']), False);
   CreateDir(ConcatPaths([outputPath,'cdicache']));
-  RunCommand(
+  RunCommandWithLog(
     ConcatPaths([ApplicationPath,Executable]),
     [
       inputPath,
@@ -531,7 +613,8 @@ begin
     ],
     outputString,
     [poWaitOnExit],
-    swoNone
+    swoNone,
+    GDEmuInstance
   );
 
   FindAllFiles(cacheFiles, ConcatPaths([outputPath,'cdicache']), '*.iso', False, faAnyFile);
@@ -541,7 +624,7 @@ begin
     isoFileStream:=TFileStream.Create(cacheFiles[0], fmOpenRead);
     DeleteFile(ConcatPaths([outputPath, 'cdicache', 'ip.bin']));
     ipFileStream:=TFileStream.Create(ConcatPaths([outputPath, 'cdicache', 'ip.bin']), fmCreate);
-    isoFileStream.ReadBuffer(fileBuffer,bufferSize);
+    isoFileStream.ReadBuffer(fileBuffer, bufferSize);
     isoFileStream.Free;
     ipFileStream.WriteBuffer(fileBuffer,bufferSize);
     ipFileStream.Free;
@@ -643,6 +726,7 @@ begin
   GDEmuListIni:=TStringList.Create;
   GDEmuListIni.LoadFromFile( ConcatPaths(['./','ini','LIST.INI']) );
   LocalGamesDirectoriesList:=TStringList.Create;
+  CommandLog:=TStringList.Create;
   GDIToolsProcess:=TGDIToolsProcess.Create;
   HexDump:=THexDump.Create;
   GenISOImage:=TGenISOImage.Create;
@@ -656,9 +740,14 @@ procedure TGDEmu.SetApplicationPath(value: String);
 begin
   ApplicationPath:=value;
   GDIToolsProcess.ApplicationPath:=ApplicationPath;
+  GDIToolsProcess.SetGDEmuInstance(Self);
   GenISOImage.ApplicationPath:=ApplicationPath;
+  GenISOImage.SetGDEmuInstance(Self);
+  HexDump.SetGDEmuInstance(Self);
   CDI4DC.ApplicationPath:=ApplicationPath;
+  CDI4DC.SetGDEmuInstance(Self);
   CDIRIP.ApplicationPath:=ApplicationPath;
+  CDIRIP.SetGDEmuInstance(Self);
 end;
 
 procedure TGDEmu.SetLocalGamesDirectories(List: TStrings);
@@ -1083,9 +1172,23 @@ var
     coverCacheImageFilename: String;
     gameDBFileName: String;
     coverFileTest: TPicture;
+    coverFileCheck: TFileStream;
 begin
   coverCacheImageFilename:='';
   coverFileTest:=TPicture.Create;
+
+  if FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
+  begin
+    coverFileCheck:=TFileStream.Create(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']), fmOpenRead or fmShareDenyWrite);
+    try
+      if coverFileCheck.Size = 0 then
+      begin
+        DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
+      end;
+    finally
+      coverFileCheck.Free;
+    end;
+  end;
 
   if not FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
   begin
@@ -1272,6 +1375,29 @@ begin
 
   DeleteFile(ConcatPaths([outputPath,legalName,'disc.iso']));
   DeleteFile(ConcatPaths([ApplicationPath,'temp','BOR.PAK']));
+end;
+
+procedure TGDEmu.AddCommandLog(const command: String; const output: String);
+var
+  logEntry: String;
+begin
+  logEntry:=Format('[%s] %s', [FormatDateTime('hh:nn:ss', Now), command]);
+  if output <> '' then
+    logEntry:=logEntry + LineEnding + output;
+  CommandLog.Add(logEntry);
+  CommandLog.Add('---');
+  // Também escreve no console se disponível
+  WriteLn(logEntry);
+end;
+
+function TGDEmu.GetCommandLog: TStringList;
+begin
+  Result:=CommandLog;
+end;
+
+procedure TGDEmu.ClearCommandLog;
+begin
+  CommandLog.Clear;
 end;
 
 end.
