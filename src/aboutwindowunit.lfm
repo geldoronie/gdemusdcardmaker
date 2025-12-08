@@ -1,22 +1,21 @@
 object AboutWindow: TAboutWindow
-  Left = 1579
-  Height = 378
-  Top = 347
-  Width = 527
+  Left = 3495
+  Height = 454
+  Top = 371
+  Width = 632
   BorderIcons = []
   BorderStyle = bsDialog
   Caption = 'About'
-  ClientHeight = 378
-  ClientWidth = 527
-  DesignTimePPI = 80
-  OnCreate = FormCreate
+  ClientHeight = 454
+  ClientWidth = 632
   Position = poMainFormCenter
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '4.2.0.0'
+  OnCreate = FormCreate
   object Image1: TImage
-    Left = 8
-    Height = 128
-    Top = 8
-    Width = 128
+    Left = 10
+    Height = 154
+    Top = 10
+    Width = 154
     Picture.Data = {
       1754506F727461626C654E6574776F726B47726170686963D72C000089504E47
       0D0A1A0A0000000D4948445200000080000000800806000000C33E61CB00002C
@@ -381,67 +380,67 @@ object AboutWindow: TAboutWindow
     }
   end
   object Label1: TLabel
-    Left = 144
-    Height = 21
-    Top = 8
-    Width = 284
+    Left = 173
+    Height = 32
+    Top = 10
+    Width = 301
     Caption = 'GDEmu SDCard Maker GUI'
-    Font.Height = -19
+    Font.Height = -23
     Font.Name = 'Sans'
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
   end
   object Label2: TLabel
-    Left = 144
-    Height = 12
-    Top = 40
-    Width = 55
+    Left = 173
+    Height = 18
+    Top = 48
+    Width = 56
     Caption = 'Licence: '
-    Font.Height = -11
+    Font.Height = -13
     Font.Name = 'Sans'
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
   end
   object Label3: TLabel
-    Left = 144
-    Height = 12
-    Top = 56
-    Width = 47
+    Left = 173
+    Height = 18
+    Top = 67
+    Width = 48
     Caption = 'Source:'
-    Font.Height = -11
+    Font.Height = -13
     Font.Name = 'Sans'
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
   end
   object Label4: TLabel
-    Left = 200
-    Height = 14
-    Top = 40
-    Width = 20
+    Left = 240
+    Height = 18
+    Top = 48
+    Width = 25
     Caption = 'MIT'
     ParentColor = False
   end
   object StaticText1: TStaticText
-    Left = 200
-    Height = 18
-    Top = 56
-    Width = 320
+    Left = 240
+    Height = 22
+    Top = 67
+    Width = 384
     Caption = 'https://github.com/geldoronie/gdemusdcardmaker'
     Font.Color = clActiveCaption
-    Font.Height = -11
+    Font.Height = -13
     Font.Name = 'Sans'
     Font.Style = [fsBold, fsUnderline]
     ParentFont = False
     TabOrder = 0
   end
   object Memo1: TMemo
-    Left = 8
-    Height = 176
-    Top = 160
-    Width = 512
+    Left = 10
+    Height = 211
+    Top = 192
+    Width = 614
     Color = clBackground
     Lines.Strings = (
       '## Programers'
@@ -459,41 +458,41 @@ object AboutWindow: TAboutWindow
     TabOrder = 1
   end
   object Label5: TLabel
-    Left = 144
-    Height = 12
-    Top = 72
-    Width = 51
+    Left = 173
+    Height = 18
+    Top = 86
+    Width = 53
     Caption = 'Version:'
-    Font.Height = -11
+    Font.Height = -13
     Font.Name = 'Sans'
     Font.Style = [fsBold]
     ParentColor = False
     ParentFont = False
   end
   object Version: TLabel
-    Left = 200
-    Height = 14
-    Top = 72
-    Width = 24
+    Left = 240
+    Height = 18
+    Top = 86
+    Width = 30
     Caption = '0.0.0'
     ParentColor = False
   end
   object OkBitBtn: TBitBtn
-    Left = 200
-    Height = 25
-    Top = 344
-    Width = 120
+    Left = 240
+    Height = 30
+    Top = 413
+    Width = 144
     Caption = 'OK'
-    OnClick = OkBitBtnClick
     TabOrder = 2
+    OnClick = OkBitBtnClick
   end
   object Label6: TLabel
-    Left = 8
-    Height = 12
-    Top = 144
-    Width = 84
+    Left = 10
+    Height = 18
+    Top = 173
+    Width = 88
     Caption = 'Colaborators:'
-    Font.Height = -11
+    Font.Height = -13
     Font.Name = 'Sans'
     Font.Style = [fsBold]
     ParentColor = False

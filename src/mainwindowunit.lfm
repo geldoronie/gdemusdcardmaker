@@ -1,49 +1,48 @@
 object MainWindow: TMainWindow
-  Left = 1360
-  Height = 638
-  Top = 198
-  Width = 1173
+  Left = 3200
+  Height = 796
+  Top = 183
+  Width = 1523
   Caption = 'GDEMU GUI'
-  ClientHeight = 612
-  ClientWidth = 1173
-  DesignTimePPI = 80
+  ClientHeight = 796
+  ClientWidth = 1523
   Menu = MainWindowMenu
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '4.2.0.0'
   object LocalGamesToolsPanel: TPanel
     Left = 0
-    Height = 612
+    Height = 796
     Top = 0
-    Width = 584
+    Width = 816
     Align = alClient
-    ClientHeight = 612
-    ClientWidth = 584
+    ClientHeight = 796
+    ClientWidth = 816
     TabOrder = 0
     object LocalGamesList: TCheckListBox
       Left = 1
-      Height = 430
-      Top = 35
-      Width = 582
+      Height = 578
+      Top = 42
+      Width = 814
       Align = alClient
       ItemHeight = 0
-      OnSelectionChange = LocalGamesListSelectionChange
       TabOrder = 0
       TopIndex = -1
+      OnSelectionChange = LocalGamesListSelectionChange
     end
     object LocalGamesToolsButtonsPanel: TPanel
       Left = 1
-      Height = 34
+      Height = 41
       Top = 1
-      Width = 582
+      Width = 814
       Align = alTop
-      ClientHeight = 34
-      ClientWidth = 582
+      ClientHeight = 41
+      ClientWidth = 814
       TabOrder = 1
       object OpenLocalGamesDirectoriesDialogBitBtn: TBitBtn
         Left = -1
-        Height = 33
+        Height = 40
         Hint = 'Open Local Game Folders'
         Top = 1
-        Width = 32
+        Width = 38
         Glyph.Data = {
           36090000424D3609000000000000360000002800000018000000180000000100
           2000000000000009000064000000640000000000000000000000FFFFFF00FFFF
@@ -120,17 +119,17 @@ object MainWindow: TMainWindow
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
         }
-        OnClick = OpenLocalGamesDirectoriesDialogBitBtnClick
         ParentShowHint = False
         ShowHint = True
         TabOrder = 0
+        OnClick = OpenLocalGamesDirectoriesDialogBitBtnClick
       end
       object CopySelectedBitBtn: TBitBtn
-        Left = 549
-        Height = 32
+        Left = 775
+        Height = 39
         Hint = 'Copy Selected'
         Top = 1
-        Width = 32
+        Width = 38
         Align = alRight
         Glyph.Data = {
           36090000424D3609000000000000360000002800000018000000180000000100
@@ -208,117 +207,113 @@ object MainWindow: TMainWindow
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
         }
-        OnClick = CopySelectedBitBtnClick
         ParentShowHint = False
         ShowHint = True
         TabOrder = 1
+        OnClick = CopySelectedBitBtnClick
       end
     end
     object LocalGameInfoPanel: TPanel
       Left = 1
-      Height = 146
-      Top = 465
-      Width = 582
+      Height = 175
+      Top = 620
+      Width = 814
       Align = alBottom
-      ClientHeight = 146
-      ClientWidth = 582
+      ClientHeight = 175
+      ClientWidth = 814
       TabOrder = 2
       object LocalGameCoverImage: TImage
-        Left = 8
-        Height = 128
-        Top = 8
-        Width = 128
+        Left = 10
+        Height = 154
+        Top = 10
+        Width = 154
         Proportional = True
         Stretch = True
       end
       object LocalGameNameLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 8
-        Width = 428
+        Left = 173
+        Height = 17
+        Top = 10
+        Width = 629
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Name:'
-        ParentColor = False
       end
       object LocalGameDiscTypeLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 24
-        Width = 430
+        Left = 173
+        Height = 17
+        Top = 29
+        Width = 631
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Extenstion:'
-        ParentColor = False
       end
       object LocalGamePathLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 40
-        Width = 428
+        Left = 173
+        Height = 17
+        Top = 48
+        Width = 629
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Path:'
-        ParentColor = False
         WordWrap = True
       end
       object LocalGameMD5Label: TLabel
-        Left = 144
-        Height = 14
-        Top = 55
-        Width = 428
+        Left = 173
+        Height = 17
+        Top = 66
+        Width = 629
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'MD5:'
-        ParentColor = False
         WordWrap = True
       end
     end
   end
   object Splitter1: TSplitter
-    Left = 584
-    Height = 612
+    Left = 816
+    Height = 796
     Top = 0
-    Width = 8
+    Width = 10
     Align = alRight
     Beveled = True
     ResizeAnchor = akRight
   end
   object SDCardGamesToolsPanel: TPanel
-    Left = 592
-    Height = 612
+    Left = 826
+    Height = 796
     Top = 0
-    Width = 581
+    Width = 697
     Align = alRight
-    ClientHeight = 612
-    ClientWidth = 581
+    ClientHeight = 796
+    ClientWidth = 697
     TabOrder = 1
     object SDCardList: TCheckListBox
       Left = 1
-      Height = 412
-      Top = 52
-      Width = 579
+      Height = 557
+      Top = 62
+      Width = 695
       Align = alClient
       ItemHeight = 0
-      OnSelectionChange = SDCardListSelectionChange
       TabOrder = 0
       TopIndex = -1
+      OnSelectionChange = SDCardListSelectionChange
     end
     object SDCardGamesToolsButtonsPanel: TPanel
       Left = 1
-      Height = 34
+      Height = 41
       Top = 1
-      Width = 579
+      Width = 695
       Align = alTop
-      ClientHeight = 34
-      ClientWidth = 579
+      ClientHeight = 41
+      ClientWidth = 695
       TabOrder = 1
       object LoadSDCardBitBtn: TBitBtn
         Left = 1
-        Height = 32
+        Height = 39
         Hint = 'Load SD Card'
         Top = 1
-        Width = 32
+        Width = 38
         Align = alLeft
         Glyph.Data = {
           36090000424D3609000000000000360000002800000018000000180000000100
@@ -396,17 +391,17 @@ object MainWindow: TMainWindow
           0000000000000000000000000000000000000000000000000000000000000000
           0000000000000000000000000000000000000000000000000000
         }
-        OnClick = LoadSDCardBitBtnClick
         ParentShowHint = False
         ShowHint = True
         TabOrder = 0
+        OnClick = LoadSDCardBitBtnClick
       end
       object RemoveGameFromSDCardBitBtn: TBitBtn
-        Left = 546
-        Height = 32
+        Left = 656
+        Height = 39
         Hint = 'Remove from SD Card'
         Top = 1
-        Width = 32
+        Width = 38
         Align = alRight
         Glyph.Data = {
           36090000424D3609000000000000360000002800000018000000180000000100
@@ -484,17 +479,17 @@ object MainWindow: TMainWindow
           0000000000000000000000000000000000000000000000000000000000000000
           0000000000000000000000000000000000000000000000000000
         }
-        OnClick = RemoveGameFromSDCardBitBtnClick
         ParentShowHint = False
         ShowHint = True
         TabOrder = 1
+        OnClick = RemoveGameFromSDCardBitBtnClick
       end
       object UpdateGamesListSDCardBitBtn: TBitBtn
-        Left = 33
-        Height = 32
+        Left = 39
+        Height = 39
         Hint = 'Refresh Games List'
         Top = 1
-        Width = 32
+        Width = 38
         Align = alLeft
         Glyph.Data = {
           36090000424D3609000000000000360000002800000018000000180000000100
@@ -572,92 +567,87 @@ object MainWindow: TMainWindow
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFF
           FF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00FFFFFF00
         }
-        OnClick = UpdateGamesListSDCardBitBtnClick
         ParentShowHint = False
         ShowHint = True
         TabOrder = 2
+        OnClick = UpdateGamesListSDCardBitBtnClick
       end
     end
     object SDCardGameInfoPanel: TPanel
       Left = 1
-      Height = 147
-      Top = 464
-      Width = 579
+      Height = 176
+      Top = 619
+      Width = 695
       Align = alBottom
-      ClientHeight = 147
-      ClientWidth = 579
+      ClientHeight = 176
+      ClientWidth = 695
       TabOrder = 2
       object SDCardCoverImage: TImage
-        Left = 8
-        Height = 128
-        Top = 8
-        Width = 128
+        Left = 10
+        Height = 154
+        Top = 10
+        Width = 154
         Proportional = True
         Stretch = True
       end
       object SDCardGameDiscTypeLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 24
-        Width = 426
+        Left = 173
+        Height = 17
+        Top = 29
+        Width = 511
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Extenstion:'
-        ParentColor = False
       end
       object SDCardGameNameLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 8
-        Width = 427
+        Left = 173
+        Height = 17
+        Top = 10
+        Width = 512
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Name:'
-        ParentColor = False
       end
       object SDCardGamePathLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 40
-        Width = 426
+        Left = 173
+        Height = 17
+        Top = 48
+        Width = 511
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Path:'
-        ParentColor = False
       end
       object SDCardGameIndexLabel: TLabel
-        Left = 144
-        Height = 14
-        Top = 72
-        Width = 426
+        Left = 173
+        Height = 17
+        Top = 86
+        Width = 511
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'Index:'
-        ParentColor = False
       end
       object SDCardGameMD5Label: TLabel
-        Left = 144
-        Height = 14
-        Top = 56
-        Width = 426
+        Left = 173
+        Height = 17
+        Top = 67
+        Width = 511
         Anchors = [akTop, akLeft, akRight]
         AutoSize = False
         Caption = 'MD5:'
-        ParentColor = False
       end
     end
     object DiskUseProgressBar: TProgressBar
       Left = 1
-      Height = 17
-      Top = 35
-      Width = 579
+      Height = 20
+      Top = 42
+      Width = 695
       Align = alTop
       TabOrder = 3
     end
   end
   object MainWindowMenu: TMainMenu
-    Left = 1032
-    Top = 128
+    Left = 1238
+    Top = 154
     object FileMenuItem: TMenuItem
       Caption = '&File'
       object OpenMenuItem: TMenuItem
@@ -963,7 +953,7 @@ object MainWindow: TMainWindow
     end
   end
   object OpenSDCardDirectorySelectDirectoryDialog: TSelectDirectoryDialog
-    Left = 1032
-    Top = 72
+    Left = 1238
+    Top = 86
   end
 end
