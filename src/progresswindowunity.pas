@@ -101,6 +101,5 @@ begin
   CounterTimer.Enabled:=True;
 end;
 
-
 end.
 
