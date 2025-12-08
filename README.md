@@ -6,9 +6,11 @@
 
 **QT 5**
 - libqt5pas-dev
+- cdrkit
 
 **GTK 2**
 - libgtk-2-dev
+- cdrkit
 
 ## Used Resources
 ---

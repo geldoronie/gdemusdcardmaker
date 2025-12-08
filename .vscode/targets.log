@@ -8,7 +8,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Thu Dec 23 00:39:53 2021
+# Make data base, printed on Fri Jan  7 23:20:37 2022
 
 # Variables
 
@@ -19,7 +19,7 @@ LC_ALL = C
 # environment
 GTK_RC_FILES = /etc/gtk/gtkrc:/home/geldo/.gtkrc:/home/geldo/.config/gtkrc
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-ad53e90c-7a3e-44ae-ab31-c4060fada335.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-18eba102-a476-4d98-a507-b7c992b9ea1e.sock
 # environment
 MANDATORY_PATH = /usr/share/gconf/plasma.mandatory.path
 # environment
@@ -81,7 +81,7 @@ PAM_KWALLET5_LOGIN = /run/user/1000/kwallet5.socket
 # environment
 MFLAGS = -pqrR
 # environment
-SSH_AUTH_SOCK = /tmp/ssh-ortwNU0LClny/agent.3008
+SSH_AUTH_SOCK = /tmp/ssh-TJodn4VaLkJa/agent.3081
 # default
 .SHELLFLAGS := -c
 # environment
@@ -101,13 +101,13 @@ MAKEFILE_LIST :=
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-VSCODE_PID = 15398
+VSCODE_PID = 4710
 # environment
 XDG_SESSION_TYPE = x11
 # automatic
 ?D = $(patsubst %/,%,$(dir $?))
 # environment
-SESSION_MANAGER = local/pegasu-linux:@/tmp/.ICE-unix/3232,unix/pegasu-linux:/tmp/.ICE-unix/3232
+SESSION_MANAGER = local/pegasu-linux:@/tmp/.ICE-unix/3284,unix/pegasu-linux:/tmp/.ICE-unix/3284
 # automatic
 *F = $(notdir $*)
 # environment
@@ -187,7 +187,7 @@ MAKE_VERSION := 4.3
 # environment
 LC_MEASUREMENT = pt_BR.UTF-8
 # environment
-SSH_AGENT_PID = 3107
+SSH_AGENT_PID = 3181
 # environment
 LC_PAPER = pt_BR.UTF-8
 # environment
@@ -239,7 +239,7 @@ LC_IDENTIFICATION = pt_BR.UTF-8
 
 # Directories
 
-# . (device 2098, inode 5104685): 19 files, no impossibilities.
+# . (device 2050, inode 5104685): 19 files, no impossibilities.
 
 # 19 files, no impossibilities in 1 directories.
 
@@ -279,6 +279,7 @@ makefile:
 # Not a target:
 GNUmakefile:
 #  Implicit rule search has been done.
+ 
 #  File does not exist.
 #  File has been updated.
 #  Failed to be updated.
@@ -288,7 +289,6 @@ GNUmakefile:
 # VPATH Search Paths
 
 # No 'vpath' search paths.
- 
 
 # No general ('VPATH' variable) search path.
 
@@ -298,6 +298,6 @@ GNUmakefile:
 # strcache performance: lookups = 30 / hit rate = 10%
 # hash-table stats:
 # Load=27/8192=0%, Rehash=0, Collisions=0/30=0%
-# Finished Make data base on Thu Dec 23 00:39:53 2021
+# Finished Make data base on Fri Jan  7 23:20:37 2022
 
  
