@@ -1,6 +1,0 @@
-version: '2'
-services:
-    kallistios-docker:
-        build: ./kallistios-docker
-        volumes:
-            - "./openbor:/home/dreamcast/openbor"            
