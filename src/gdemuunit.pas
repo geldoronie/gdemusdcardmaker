@@ -194,6 +194,11 @@ type
       function GetMetaFileInfoCache(game: TGDEmuGame): TGDEmuGame;
       function GetCommandLog: TStringList;
       procedure ClearCommandLog;
+    private
+      function TryGetCoverFromTheGamesDB(game: TGDEmuGame; searchTerms: TStringList): String;
+      function TryGetCoverFromScreenScraper(game: TGDEmuGame; searchTerms: TStringList): String;
+      function TryGetCoverFromGamesDatabase(game: TGDEmuGame; searchTerms: TStringList): String;
+      function DownloadAndValidateImage(imageUrl: String; cacheFilename: String): Boolean;
     end;
 
 var
@@ -624,6 +629,7 @@ begin
     isoFileStream:=TFileStream.Create(cacheFiles[0], fmOpenRead);
     DeleteFile(ConcatPaths([outputPath, 'cdicache', 'ip.bin']));
     ipFileStream:=TFileStream.Create(ConcatPaths([outputPath, 'cdicache', 'ip.bin']), fmCreate);
+    FillChar(fileBuffer, SizeOf(fileBuffer), 0);
     isoFileStream.ReadBuffer(fileBuffer, bufferSize);
     isoFileStream.Free;
     ipFileStream.WriteBuffer(fileBuffer,bufferSize);
@@ -1165,76 +1171,543 @@ end;
 
 function TGDEmu.GetGameCover(game: TGDEmuGame): String;
 var
-    imageFile: TStream;
-    Document: THTMLDocument;
-    Elements: TDOMNodeList;
-    i: integer;
     coverCacheImageFilename: String;
-    gameDBFileName: String;
     coverFileTest: TPicture;
     coverFileCheck: TFileStream;
+    imageFound: Boolean;
+    searchVariations: TStringList;
+    imageSize: Int64;
 begin
   coverCacheImageFilename:='';
   coverFileTest:=TPicture.Create;
+  imageFound:=False;
+  coverFileCheck:=nil;
 
+  // Verificar se já existe no cache e é válido
   if FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
   begin
-    coverFileCheck:=TFileStream.Create(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']), fmOpenRead or fmShareDenyWrite);
     try
-      if coverFileCheck.Size = 0 then
-      begin
-        DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
-      end;
-    finally
-      coverFileCheck.Free;
-    end;
-  end;
-
-  if not FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
-  begin
-    HTTPClient.ConnectTimeout:=1000000;
-    HTTPClient.IOTimeout:=100000;
-    Document:=THTMLDocument.Create;
-    imageFile:=TFileStream.Create(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']) ,fmCreate or fmOpenWrite);
-    try
-      HTTPClient.AllowRedirect:=true;
-      ReadHTMLFile(
-        Document,
-        TStringStream.Create(
-          HTTPClient.Get('https://www.gamesdatabase.org/media/sega-dreamcast/artwork-box/' + game.SlugName)
-        )
-      );
-      Elements:=Document.GetElementsByTagName('img');
-      for i:=0 to Elements.Count -1 do
-      begin
-        if Pos('/Box/',Elements[i].Attributes.GetNamedItem('src').NodeValue) > 0 then
+      coverFileCheck:=TFileStream.Create(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']), fmOpenRead or fmShareDenyWrite);
+      try
+        imageSize:=coverFileCheck.Size;
+        if imageSize = 0 then
         begin
-          gameDBFileName:=UTF8Encode(Elements[i].Attributes.GetNamedItem('src').NodeValue);
-          HTTPClient.Get('https://www.gamesdatabase.org' + gameDBFileName,imageFile);
-          coverCacheImageFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+          DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
+        end
+        else
+        begin
+          // Verificar se é uma imagem válida
+          coverFileCheck.Position:=0;
+          coverFileTest.LoadFromStream(coverFileCheck);
+          if (coverFileTest.Width > 0) and (coverFileTest.Height > 0) then
+          begin
+            coverCacheImageFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+            imageFound:=True;
+          end
+          else
+          begin
+            DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
+          end;
+        end;
+      finally
+        if coverFileCheck <> nil then
+        begin
+          coverFileCheck.Free;
+          coverFileCheck:=nil;
         end;
       end;
     except
-      coverCacheImageFilename:=ConcatPaths([ApplicationPath,'data','gdrom.png']);
-    end;
-    imageFile.Free;
-  end
-  else
-  begin
-    try
-      coverCacheImageFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
-      coverFileTest.LoadFromFile(coverCacheImageFilename);
-      if coverFileTest.Width + coverFileTest.Height <= 0 then
-      begin
-        coverFileTest.Free;
-        raise Exception.Create('Invalid file');
-      end;
-    except
-      coverCacheImageFilename:=ConcatPaths([ApplicationPath,'data','gdrom.png']);
+      // Se houver erro ao ler, deletar e tentar baixar novamente
+      if FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
+        DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
     end;
   end;
 
+  // Se não encontrou no cache, tentar baixar de múltiplas fontes
+  if not imageFound then
+  begin
+    // Configurar HTTP client com timeouts razoáveis e User-Agent
+    HTTPClient.ConnectTimeout:=10000; // 10 segundos
+    HTTPClient.IOTimeout:=30000; // 30 segundos
+    HTTPClient.AllowRedirect:=true;
+    HTTPClient.AddHeader('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    
+    // Criar lista de variações para tentar
+    searchVariations:=TStringList.Create;
+    try
+      // Tentar com o nome do jogo (mais comum)
+      if game.Name <> '' then
+        searchVariations.Add(game.Name);
+      
+      // Tentar com o nome interno (se diferente)
+      if (game.InternalName <> '') and (LowerCase(game.InternalName) <> LowerCase(game.Name)) then
+      begin
+        searchVariations.Add(game.InternalName);
+      end;
+      
+      // Tentar com o nome legal (se diferente)
+      if (game.LegalName <> '') and (LowerCase(game.LegalName) <> LowerCase(game.Name)) then
+      begin
+        searchVariations.Add(game.LegalName);
+      end;
+      
+      // Tentar com o slug (última opção)
+      if (game.SlugName <> '') and (searchVariations.IndexOf(game.SlugName) = -1) then
+      begin
+        searchVariations.Add(game.SlugName);
+      end;
+
+      // Tentar fontes em ordem de preferência:
+      // 1. TheGamesDB.net (API JSON - mais confiável)
+      coverCacheImageFilename:=TryGetCoverFromTheGamesDB(game, searchVariations);
+      if coverCacheImageFilename <> '' then
+        imageFound:=True;
+      
+      // 2. ScreenScraper.fr (API JSON - focado em emuladores)
+      if not imageFound then
+      begin
+        coverCacheImageFilename:=TryGetCoverFromScreenScraper(game, searchVariations);
+        if coverCacheImageFilename <> '' then
+          imageFound:=True;
+      end;
+      
+      // 3. GamesDatabase.org (scraping HTML - fallback)
+      if not imageFound then
+      begin
+        coverCacheImageFilename:=TryGetCoverFromGamesDatabase(game, searchVariations);
+        if coverCacheImageFilename <> '' then
+          imageFound:=True;
+      end;
+      
+    finally
+      searchVariations.Free;
+    end;
+  end;
+
+  // Se não encontrou, usar imagem padrão
+  if not imageFound then
+  begin
+    coverCacheImageFilename:=ConcatPaths([ApplicationPath,'data','gdrom.png']);
+  end;
+
+  // Limpar recursos
+  coverFileTest.Free;
+
   Result:=coverCacheImageFilename;
+end;
+
+function TGDEmu.DownloadAndValidateImage(imageUrl: String; cacheFilename: String): Boolean;
+var
+  imageFile: TFileStream;
+  coverFileTest: TPicture;
+  tempFilename: String;
+begin
+  Result:=False;
+  tempFilename:=cacheFilename + '.tmp';
+  imageFile:=nil;
+  coverFileTest:=TPicture.Create;
+  
+  try
+    try
+      // Criar arquivo temporário
+      imageFile:=TFileStream.Create(tempFilename, fmCreate or fmOpenWrite);
+      
+      // Baixar imagem
+      HTTPClient.Get(imageUrl, imageFile);
+      
+      // Verificar tamanho mínimo
+      if imageFile.Size > 1024 then // Pelo menos 1KB
+      begin
+        imageFile.Free;
+        imageFile:=nil;
+        
+        // Validar se é uma imagem válida
+        coverFileTest.LoadFromFile(tempFilename);
+        if (coverFileTest.Width > 100) and (coverFileTest.Height > 100) then
+        begin
+          // Renomear arquivo temporário para final
+          if FileExists(cacheFilename) then
+            DeleteFile(cacheFilename);
+          RenameFile(tempFilename, cacheFilename);
+          Result:=True;
+        end
+        else
+        begin
+          DeleteFile(tempFilename);
+        end;
+      end
+      else
+      begin
+        DeleteFile(tempFilename);
+      end;
+    except
+      // Erro ao baixar ou validar
+      if FileExists(tempFilename) then
+        DeleteFile(tempFilename);
+      Result:=False;
+    end;
+  finally
+    if imageFile <> nil then
+    begin
+      imageFile.Free;
+      imageFile:=nil;
+    end;
+    coverFileTest.Free;
+  end;
+end;
+
+function TGDEmu.TryGetCoverFromTheGamesDB(game: TGDEmuGame; searchTerms: TStringList): String;
+var
+  jsonRoot: TJSONData;
+  jsonData: TJSONData;
+  jsonObject: TJSONObject;
+  jsonArray: TJSONArray;
+  jsonItem: TJSONObject;
+  jsonImages: TJSONData;
+  jsonBoxart: TJSONData;
+  i, j: integer;
+  searchUrl: String;
+  response: String;
+  imageUrl: String;
+  cacheFilename: String;
+  gameName: String;
+  gameId: String;
+begin
+  Result:='';
+  
+  // TheGamesDB.net API v2 - Busca por nome
+  // API: https://api.thegamesdb.net/v1/Games/ByGameName?apikey=1&name={name}&platform=sega-dreamcast
+  // Não requer API key para uso básico
+  
+  for j:=0 to searchTerms.Count -1 do
+  begin
+    if Result <> '' then Break;
+    
+    gameName:=searchTerms[j];
+    // URL encode básico
+    gameName:=StringReplace(gameName, ' ', '%20', [rfReplaceAll]);
+    gameName:=StringReplace(gameName, '&', '%26', [rfReplaceAll]);
+    gameName:=StringReplace(gameName, '+', '%2B', [rfReplaceAll]);
+    
+    searchUrl:='https://api.thegamesdb.net/v1/Games/ByGameName?apikey=1&name=' + gameName + '&platform=sega-dreamcast';
+    jsonRoot:=nil;
+    
+    try
+      HTTPClient.AddHeader('Accept', 'application/json');
+      response:=HTTPClient.Get(searchUrl);
+      
+      if response <> '' then
+      begin
+        jsonRoot:=GetJSON(response);
+        try
+          if jsonRoot is TJSONObject then
+          begin
+            jsonObject:=TJSONObject(jsonRoot);
+            
+            // Verificar se há dados
+            if jsonObject.Find('data', jsonData) and (jsonData is TJSONObject) then
+            begin
+              jsonObject:=TJSONObject(jsonData);
+              
+              // Verificar se há games
+              if jsonObject.Find('games', jsonData) and (jsonData is TJSONArray) then
+              begin
+                jsonArray:=TJSONArray(jsonData);
+                
+                // Pegar o primeiro resultado
+                if jsonArray.Count > 0 then
+                begin
+                  jsonItem:=TJSONObject(jsonArray[0]);
+                  
+                  // Pegar ID do jogo
+                  if jsonItem.Find('id', jsonData) then
+                  begin
+                    gameId:=jsonData.AsString;
+                    
+                    // Buscar imagens do jogo
+                    // API: https://api.thegamesdb.net/v1/Games/Images?apikey=1&games_id={id}
+                    searchUrl:='https://api.thegamesdb.net/v1/Games/Images?apikey=1&games_id=' + gameId;
+                    response:=HTTPClient.Get(searchUrl);
+                    
+                    if response <> '' then
+                    begin
+                      // Liberar JSON anterior
+                      jsonRoot.Free;
+                      jsonRoot:=GetJSON(response);
+                      
+                      if jsonRoot is TJSONObject then
+                      begin
+                        jsonObject:=TJSONObject(jsonRoot);
+                        
+                        if jsonObject.Find('data', jsonData) and (jsonData is TJSONObject) then
+                        begin
+                          jsonObject:=TJSONObject(jsonData);
+                          
+                          // Procurar por imagens do tipo "boxart" ou "cover"
+                          if jsonObject.Find('images', jsonImages) and (jsonImages is TJSONObject) then
+                          begin
+                            jsonObject:=TJSONObject(jsonImages);
+                            
+                            // Procurar por boxart
+                            if jsonObject.Find('boxart', jsonBoxart) and (jsonBoxart is TJSONObject) then
+                            begin
+                              jsonObject:=TJSONObject(jsonBoxart);
+                              
+                              // Pegar a primeira imagem original
+                              for i:=0 to jsonObject.Count -1 do
+                              begin
+                                if jsonObject.Items[i] is TJSONObject then
+                                begin
+                                  jsonItem:=TJSONObject(jsonObject.Items[i]);
+                                  
+                                  // Procurar por "original" ou a maior resolução
+                                  if jsonItem.Find('original', jsonData) then
+                                  begin
+                                    imageUrl:=jsonData.AsString;
+                                    
+                                    // Construir URL completa se for relativa
+                                    if Pos('http', imageUrl) = 0 then
+                                      imageUrl:='https://cdn.thegamesdb.net/images/original/' + imageUrl;
+                                    
+                                    cacheFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+                                    
+                                    if DownloadAndValidateImage(imageUrl, cacheFilename) then
+                                    begin
+                                      Result:=cacheFilename;
+                                      Break;
+                                    end;
+                                  end;
+                                end;
+                              end;
+                            end;
+                          end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        finally
+          if jsonRoot <> nil then
+          begin
+            jsonRoot.Free;
+            jsonRoot:=nil;
+          end;
+        end;
+      end;
+    except
+      // Erro na API, continuar para próxima tentativa
+      if jsonRoot <> nil then
+      begin
+        jsonRoot.Free;
+        jsonRoot:=nil;
+      end;
+      Result:='';
+    end;
+  end;
+end;
+
+function TGDEmu.TryGetCoverFromScreenScraper(game: TGDEmuGame; searchTerms: TStringList): String;
+var
+  jsonRoot: TJSONData;
+  jsonData: TJSONData;
+  jsonObject: TJSONObject;
+  jsonResponse: TJSONObject;
+  jsonJeu: TJSONData;
+  jsonMedias: TJSONData;
+  jsonBox2D: TJSONData;
+  jsonBoxItem: TJSONObject;
+  j: integer;
+  searchUrl: String;
+  response: String;
+  imageUrl: String;
+  cacheFilename: String;
+  gameName: String;
+  romName: String;
+begin
+  Result:='';
+  
+  // ScreenScraper.fr API
+  // API: https://www.screenscraper.fr/api2/jeuInfos.php?devid={devid}&devpassword={password}&softname={softname}&output=json&ssid={ssid}&sspassword={sspassword}&crc={crc}&romnom={romname}&systemeid=23
+  // Requer registro para uso completo, mas tem muitas capas do Dreamcast
+  // Por enquanto, vamos usar busca por nome (sem autenticação - limitada)
+  
+  for j:=0 to searchTerms.Count -1 do
+  begin
+    if Result <> '' then Break;
+    
+    gameName:=searchTerms[j];
+    romName:=gameName;
+    
+    // ScreenScraper usa o nome da ROM
+    // Tentar com o nome interno se disponível
+    if game.InternalName <> '' then
+      romName:=GetGameSlugName(game.InternalName);
+    
+    // URL encode
+    romName:=StringReplace(romName, ' ', '%20', [rfReplaceAll]);
+    romName:=StringReplace(romName, '&', '%26', [rfReplaceAll]);
+    
+    // Busca básica (sem autenticação - limitada)
+    searchUrl:='https://www.screenscraper.fr/api2/jeuInfos.php?output=json&systemeid=23&romnom=' + romName;
+    jsonRoot:=nil;
+    
+    try
+      HTTPClient.AddHeader('Accept', 'application/json');
+      response:=HTTPClient.Get(searchUrl);
+      
+      if response <> '' then
+      begin
+        jsonRoot:=GetJSON(response);
+        try
+          if jsonRoot is TJSONObject then
+          begin
+            jsonResponse:=TJSONObject(jsonRoot);
+            
+            // Verificar se há resposta válida
+            if jsonResponse.Find('response', jsonData) and (jsonData is TJSONObject) then
+            begin
+              jsonObject:=TJSONObject(jsonData);
+              
+              // Verificar se há jogo encontrado
+              if jsonObject.Find('jeu', jsonJeu) and (jsonJeu is TJSONObject) then
+              begin
+                jsonObject:=TJSONObject(jsonJeu);
+                
+                // Procurar por media
+                if jsonObject.Find('medias', jsonMedias) and (jsonMedias is TJSONObject) then
+                begin
+                  jsonObject:=TJSONObject(jsonMedias);
+                  
+                  // Procurar por "box-2D" ou "box-3D" (capas)
+                  if jsonObject.Find('box-2D', jsonBox2D) then
+                  begin
+                    if jsonBox2D is TJSONArray then
+                    begin
+                      if TJSONArray(jsonBox2D).Count > 0 then
+                      begin
+                        if TJSONArray(jsonBox2D).Items[0] is TJSONObject then
+                        begin
+                          jsonBoxItem:=TJSONObject(TJSONArray(jsonBox2D).Items[0]);
+                          if jsonBoxItem.Find('url', jsonData) then
+                          begin
+                            imageUrl:=jsonData.AsString;
+                            
+                            // Construir URL completa se for relativa
+                            if Pos('http', imageUrl) = 0 then
+                              imageUrl:='https://www.screenscraper.fr' + imageUrl;
+                            
+                            cacheFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+                            
+                            if DownloadAndValidateImage(imageUrl, cacheFilename) then
+                            begin
+                              Result:=cacheFilename;
+                              Break;
+                            end;
+                          end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        finally
+          if jsonRoot <> nil then
+          begin
+            jsonRoot.Free;
+            jsonRoot:=nil;
+          end;
+        end;
+      end;
+    except
+      // Erro na API, continuar
+      if jsonRoot <> nil then
+      begin
+        jsonRoot.Free;
+        jsonRoot:=nil;
+      end;
+      Result:='';
+    end;
+  end;
+end;
+
+function TGDEmu.TryGetCoverFromGamesDatabase(game: TGDEmuGame; searchTerms: TStringList): String;
+var
+  Document: THTMLDocument;
+  Elements: TDOMNodeList;
+  htmlContent: TStringStream;
+  i, j: integer;
+  searchUrl: String;
+  gameDBFileName: String;
+  cacheFilename: String;
+begin
+  Result:='';
+  
+  // Método original - scraping HTML do GamesDatabase.org
+  for j:=0 to searchTerms.Count -1 do
+  begin
+    if Result <> '' then Break;
+    
+    searchUrl:='https://www.gamesdatabase.org/media/sega-dreamcast/artwork-box/' + searchTerms[j];
+    Document:=nil;
+    htmlContent:=nil;
+    
+    try
+      htmlContent:=TStringStream.Create(HTTPClient.Get(searchUrl));
+      Document:=THTMLDocument.Create;
+      ReadHTMLFile(Document, htmlContent);
+      
+      Elements:=Document.GetElementsByTagName('img');
+      for i:=0 to Elements.Count -1 do
+      begin
+        if Elements[i].Attributes.GetNamedItem('src') <> nil then
+        begin
+          gameDBFileName:=UTF8Encode(Elements[i].Attributes.GetNamedItem('src').NodeValue);
+          
+          if (Pos('/Box/',gameDBFileName) > 0) or 
+             (Pos('/box/',LowerCase(gameDBFileName)) > 0) or
+             (Pos('cover',LowerCase(gameDBFileName)) > 0) or
+             (Pos('artwork',LowerCase(gameDBFileName)) > 0) then
+          begin
+            if Pos('http', gameDBFileName) = 0 then
+            begin
+              if gameDBFileName[1] = '/' then
+                gameDBFileName:='https://www.gamesdatabase.org' + gameDBFileName
+              else
+                gameDBFileName:='https://www.gamesdatabase.org/' + gameDBFileName;
+            end;
+            
+            cacheFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+            
+            if DownloadAndValidateImage(gameDBFileName, cacheFilename) then
+            begin
+              Result:=cacheFilename;
+              Break;
+            end;
+          end;
+        end;
+      end;
+    except
+      // Erro, continuar
+      Result:='';
+    end;
+    
+    // Limpar recursos
+    if Document <> nil then
+    begin
+      Document.Free;
+      Document:=nil;
+    end;
+    if htmlContent <> nil then
+    begin
+      htmlContent.Free;
+      htmlContent:=nil;
+    end;
+  end;
 end;
 
 procedure TGDEmu.CreateInfoCacheFile(game: TGDEmuGame);
