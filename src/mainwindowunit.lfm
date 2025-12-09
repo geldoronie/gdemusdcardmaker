@@ -19,7 +19,7 @@ object MainWindow: TMainWindow
     TabOrder = 0
     object LocalGamesList: TCheckListBox
       Left = 1
-      Height = 578
+      Height = 543
       Top = 42
       Width = 814
       Align = alClient
@@ -215,11 +215,11 @@ object MainWindow: TMainWindow
     end
     object LocalGameInfoPanel: TPanel
       Left = 1
-      Height = 175
-      Top = 620
+      Height = 210
+      Top = 585
       Width = 814
       Align = alBottom
-      ClientHeight = 175
+      ClientHeight = 210
       ClientWidth = 814
       TabOrder = 2
       object LocalGameCoverImage: TImage
@@ -229,6 +229,15 @@ object MainWindow: TMainWindow
         Width = 154
         Proportional = True
         Stretch = True
+      end
+      object LocalGameDownloadCoverBitBtn: TBitBtn
+        Left = 10
+        Height = 30
+        Top = 170
+        Width = 154
+        Caption = 'Download Cover'
+        OnClick = LocalGameDownloadCoverBitBtnClick
+        TabOrder = 1
       end
       object LocalGameNameLabel: TLabel
         Left = 173
@@ -290,7 +299,7 @@ object MainWindow: TMainWindow
     TabOrder = 1
     object SDCardList: TCheckListBox
       Left = 1
-      Height = 557
+      Height = 522
       Top = 62
       Width = 695
       Align = alClient
@@ -575,11 +584,11 @@ object MainWindow: TMainWindow
     end
     object SDCardGameInfoPanel: TPanel
       Left = 1
-      Height = 176
-      Top = 619
+      Height = 211
+      Top = 584
       Width = 695
       Align = alBottom
-      ClientHeight = 176
+      ClientHeight = 211
       ClientWidth = 695
       TabOrder = 2
       object SDCardCoverImage: TImage
@@ -589,6 +598,15 @@ object MainWindow: TMainWindow
         Width = 154
         Proportional = True
         Stretch = True
+      end
+      object SDCardDownloadCoverBitBtn: TBitBtn
+        Left = 10
+        Height = 30
+        Top = 170
+        Width = 154
+        Caption = 'Download Cover'
+        OnClick = SDCardDownloadCoverBitBtnClick
+        TabOrder = 1
       end
       object SDCardGameDiscTypeLabel: TLabel
         Left = 173

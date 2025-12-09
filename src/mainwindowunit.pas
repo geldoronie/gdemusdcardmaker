@@ -38,6 +38,8 @@ type
     SDCardGameNameLabel: TLabel;
     LocalGameCoverImage: TImage;
     SDCardCoverImage: TImage;
+    LocalGameDownloadCoverBitBtn: TBitBtn;
+    SDCardDownloadCoverBitBtn: TBitBtn;
     LoadSDCardBitBtn: TBitBtn;
     OpenLocalGamesDirectoriesDialogBitBtn: TBitBtn;
     LocalGamesList: TCheckListBox;
@@ -72,6 +74,9 @@ type
     procedure OpenMenuItemClick(Sender: TObject);
     procedure SDCardListSelectionChange(Sender: TObject; User: boolean);
     procedure UpdateGamesListSDCardBitBtnClick(Sender: TObject);
+    procedure LocalGameDownloadCoverBitBtnClick(Sender: TObject);
+    procedure SDCardDownloadCoverBitBtnClick(Sender: TObject);
+    function GetCachedCoverImage(game: TGDEmuGame): String;
     procedure UpdateSDCardGamesListMenuItemClick(Sender: TObject);
   private
 
@@ -116,6 +121,7 @@ procedure TMainWindow.SDCardListSelectionChange(Sender: TObject; User: boolean);
 var
     coverImageFilename: String;
 begin
+  // User parameter is part of the event signature but not used
   if GDEmu.SDCardGamesListCount > 0 then
   begin
     SDCardGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.SDCardGamesList[SDCardList.ItemIndex].Extension);
@@ -123,28 +129,14 @@ begin
     SDCardGamePathLabel.Caption:='Path: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Path;
     SDCardGameIndexLabel.Caption:='Index: ' + Format('[%.2d]',[GDEmu.SDCardGamesList[SDCardList.ItemIndex].Index]);
     SDCardGameMD5Label.Caption:='MD5: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Id;
-    if DownloadCoverMenuItem.Checked then
-    begin
-      try
-        coverImageFilename:=GDEmu.GetGameCover(GDEmu.SDCardGamesList[SDCardList.ItemIndex]);
-        if coverImageFilename <> '' then
-        begin
-          try
-            SDCardCoverImage.Picture.LoadFromFile(coverImageFilename);
-          except
-            SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-            WriteLn('Failed to get cover image from Games Database');
-          end;
-        end;
-      except
-        SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-        WriteLn('Failed to get cover image from Games Database');
-      end;
-    end
-      else
-      begin
-        SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-      end;
+    
+    // Verificar se há capa em cache, senão mostrar padrão
+    coverImageFilename:=GetCachedCoverImage(GDEmu.SDCardGamesList[SDCardList.ItemIndex]);
+    try
+      SDCardCoverImage.Picture.LoadFromFile(coverImageFilename);
+    except
+      SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
+    end;
   end;
 end;
 
@@ -227,34 +219,21 @@ procedure TMainWindow.LocalGamesListSelectionChange(Sender: TObject;
 var
     coverImageFilename: String;
 begin
+  // User parameter is part of the event signature but not used
   if GDEmu.LocalGamesListCount > 0 then
   begin
     LocalGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Extension);
     LocalGameNameLabel.Caption:='Name: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Name;
     LocalGamePathLabel.Caption:='Path: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Path;
     LocalGameMD5Label.Caption:='MD5: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Id;
-    if DownloadCoverMenuItem.Checked then
-    begin
-      try
-        coverImageFilename:=GDEmu.GetGameCover(GDEmu.LocalGamesList[LocalGamesList.ItemIndex]);
-        if coverImageFilename <> '' then
-        begin
-          try
-            LocalGameCoverImage.Picture.LoadFromFile(coverImageFilename);
-          except
-            SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-            WriteLn('Failed to get cover image from Games Database');
-          end;
-        end;
-      except
-        SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-        WriteLn('Failed to get cover image from Games Database');
-      end;
-    end
-      else
-      begin
-        SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-      end;
+    
+    // Verificar se há capa em cache, senão mostrar padrão
+    coverImageFilename:=GetCachedCoverImage(GDEmu.LocalGamesList[LocalGamesList.ItemIndex]);
+    try
+      LocalGameCoverImage.Picture.LoadFromFile(coverImageFilename);
+    except
+      LocalGameCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
+    end;
   end;
 end;
 
@@ -383,6 +362,94 @@ begin
     MainWindow.LocalGamesList.AddItem(GDEmu.LocalGamesList[i].Name,nil);
   end;
   MainWindow.Enabled:=True;
+end;
+
+function TMainWindow.GetCachedCoverImage(game: TGDEmuGame): String;
+var
+  cacheFilename: String;
+  coverFileTest: TPicture;
+  coverFileCheck: TFileStream;
+  imageSize: Int64;
+begin
+  Result:=ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']); // Default
+  cacheFilename:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + '.jpg']);
+  
+  // Verificar se existe no cache e é válido
+  if FileExists(cacheFilename) then
+  begin
+    coverFileTest:=TPicture.Create;
+    coverFileCheck:=nil;
+    try
+      coverFileCheck:=TFileStream.Create(cacheFilename, fmOpenRead or fmShareDenyWrite);
+      try
+        imageSize:=coverFileCheck.Size;
+        if imageSize > 0 then
+        begin
+          coverFileCheck.Position:=0;
+          coverFileTest.LoadFromStream(coverFileCheck);
+          if (coverFileTest.Width > 0) and (coverFileTest.Height > 0) then
+          begin
+            Result:=cacheFilename;
+          end;
+        end;
+      finally
+        if coverFileCheck <> nil then
+          coverFileCheck.Free;
+      end;
+    except
+      // Se houver erro, usar imagem padrão
+      Result:=ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']);
+    end;
+    coverFileTest.Free;
+  end;
+end;
+
+procedure TMainWindow.LocalGameDownloadCoverBitBtnClick(Sender: TObject);
+var
+  coverImageFilename: String;
+begin
+  if GDEmu.LocalGamesListCount > 0 then
+  begin
+    LocalGameDownloadCoverBitBtn.Enabled:=False;
+    try
+      Application.ProcessMessages;
+      coverImageFilename:=GDEmu.GetGameCover(GDEmu.LocalGamesList[LocalGamesList.ItemIndex]);
+      if coverImageFilename <> '' then
+      begin
+        try
+          LocalGameCoverImage.Picture.LoadFromFile(coverImageFilename);
+        except
+          LocalGameCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
+        end;
+      end;
+    finally
+      LocalGameDownloadCoverBitBtn.Enabled:=True;
+    end;
+  end;
+end;
+
+procedure TMainWindow.SDCardDownloadCoverBitBtnClick(Sender: TObject);
+var
+  coverImageFilename: String;
+begin
+  if GDEmu.SDCardGamesListCount > 0 then
+  begin
+    SDCardDownloadCoverBitBtn.Enabled:=False;
+    try
+      Application.ProcessMessages;
+      coverImageFilename:=GDEmu.GetGameCover(GDEmu.SDCardGamesList[SDCardList.ItemIndex]);
+      if coverImageFilename <> '' then
+      begin
+        try
+          SDCardCoverImage.Picture.LoadFromFile(coverImageFilename);
+        except
+          SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
+        end;
+      end;
+    finally
+      SDCardDownloadCoverBitBtn.Enabled:=True;
+    end;
+  end;
 end;
 
 end.
