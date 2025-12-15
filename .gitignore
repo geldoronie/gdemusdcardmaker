@@ -6,3 +6,4 @@ cache/*
 *.bin
 *.debug
 [rR]eleases
+data/dcevo/000DUMMY.DAT
