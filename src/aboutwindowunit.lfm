@@ -1,7 +1,7 @@
 object AboutWindow: TAboutWindow
   Left = 3495
   Height = 454
-  Top = 371
+  Top = 370
   Width = 632
   BorderIcons = []
   BorderStyle = bsDialog

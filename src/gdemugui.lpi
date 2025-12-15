@@ -24,7 +24,7 @@
       <UseVersionInfo Value="True"/>
       <AutoIncrementBuild Value="True"/>
       <RevisionNr Value="1"/>
-      <BuildNr Value="15"/>
+      <BuildNr Value="16"/>
       <StringTable CompanyName="OpenSource" FileDescription="Executable" InternalName="gdemugui" LegalCopyright="MIT Licence" OriginalFilename="gdemugui"/>
     </VersionInfo>
     <MacroValues Count="2">
