@@ -196,6 +196,8 @@ type
       procedure ClearCommandLog;
     private
       function TryGetCoverFromGamesDatabase(game: TGDEmuGame; searchTerms: TStringList): String;
+      function TryGetCoverFromTheGamesDB(game: TGDEmuGame; searchTerms: TStringList): String;
+      function TryGetCoverFromScreenScraper(game: TGDEmuGame; searchTerms: TStringList): String;
       function DownloadAndValidateImage(imageUrl: String; cacheFilename: String): Boolean;
       function EncodeURLComponent(const s: String): String;
       function CleanGameNameForSearch(const gameName: String): String;
