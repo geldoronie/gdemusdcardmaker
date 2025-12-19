@@ -41,6 +41,14 @@ msgstr ""
 msgid "0.0.0"
 msgstr ""
 
+#: tcommandlogwindow.caption
+msgid "Command Log"
+msgstr ""
+
+#: tcommandlogwindow.titlelabel.caption
+msgid "Command Execution Log"
+msgstr ""
+
 #: tlocalgamesdirectoriesdialog.adddirectorybitbtn.caption
 msgid "Add"
 msgstr ""
