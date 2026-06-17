@@ -235,12 +235,41 @@ begin
   end;
 end;
 
+// Read a raw byte range from a file as a string (1 byte -> 1 char).
+// Replaces shelling out to `hexdump -e '"%c"' -s OFFSET -n LEN` for IP.BIN fields.
+function ReadFileByteRange(const FilePath: String; Offset, Len: Int64): ansistring;
+var
+  fs: TFileStream;
+  buf: array of Byte;
+  bytesRead: LongInt;
+begin
+  Result:='';
+  if (Len <= 0) or (not FileExists(FilePath)) then
+    Exit;
+  fs:=TFileStream.Create(FilePath, fmOpenRead or fmShareDenyWrite);
+  try
+    if Offset >= fs.Size then
+      Exit;
+    if Offset + Len > fs.Size then
+      Len:=fs.Size - Offset;
+    SetLength(buf, Len);
+    fs.Position:=Offset;
+    bytesRead:=fs.Read(buf[0], Len);
+    if bytesRead > 0 then
+      SetString(Result, PAnsiChar(@buf[0]), bytesRead);
+  finally
+    fs.Free;
+  end;
+end;
+
 { THexDump }
 
 constructor THexDump.Create;
 begin
+  // IP.BIN fields are now read directly (see ReadFileByteRange); no external
+  // hexdump process is spawned anymore.
   ExecutablePath:='';
-  Executable:='/usr/bin/hexdump';
+  Executable:='';
   GDEmuInstance:=nil;
 end;
 
@@ -251,6 +280,7 @@ end;
 
 function THexDump.GetIPBINInfo(sdCardGame: TGDEmuGame; outputDir: string): TGDEmuGame;
 var
+  ipBinPath: String;
   internalName: ansistring;
   disc: ansistring;
   vga: ansistring;
@@ -259,133 +289,17 @@ var
   date: ansistring;
   catalogID: ansistring;
 begin
-  //INTERNAL NAME
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x80',
-      '-n',
-      '128',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    internalName,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  //DISC
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x2B',
-      '-n',
-      '3',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    disc,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  //VGA
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x3D',
-      '-n',
-      '1',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    vga,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  //REGION
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x30',
-      '-n',
-      '8',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    region,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  //VERSION
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x4A',
-      '-n',
-      '6',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    version,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  //DATE
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x50',
-      '-n',
-      '8',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    date,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  //CATALOG ID
-  RunCommandWithLog(
-    Executable,
-    [
-      '-v',
-      '-e',
-      '"%c"',
-      '-s',
-      '0x40',
-      '-n',
-      '8',
-      ConcatPaths([outputDir,'ip.bin'])
-    ],
-    catalogID,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  sdCardGame.Id:=MD5Print(MD5File(ConcatPaths([outputDir,'ip.bin'])));
+  // IP.BIN bootstrap header has fixed offsets, so read the fields directly
+  // instead of spawning `hexdump` once per field (7 processes per game).
+  ipBinPath:=ConcatPaths([outputDir,'ip.bin']);
+  internalName:=ReadFileByteRange(ipBinPath, $80, 128); // software/game name
+  disc:=ReadFileByteRange(ipBinPath, $2B, 3);            // disc number e.g. "1/1"
+  vga:=ReadFileByteRange(ipBinPath, $3D, 1);             // VGA support flag
+  region:=ReadFileByteRange(ipBinPath, $30, 8);          // area symbols (J/U/E)
+  version:=ReadFileByteRange(ipBinPath, $4A, 6);         // product version
+  date:=ReadFileByteRange(ipBinPath, $50, 8);            // release date YYYYMMDD
+  catalogID:=ReadFileByteRange(ipBinPath, $40, 8);       // product/catalog number
+  sdCardGame.Id:=MD5Print(MD5File(ipBinPath));
   sdCardGame.Disc:=Trim(disc);
   sdCardGame.VGA:=Trim(vga);
   sdCardGame.Region:=Trim(region);
