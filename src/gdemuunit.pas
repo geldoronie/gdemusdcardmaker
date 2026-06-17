@@ -178,14 +178,12 @@ type
       procedure ClearLocalGamesDirectories;
       procedure ClearSDCardGamesDirectories;
       procedure RemoveFromSDCard;
-      procedure FixSDCardFolders;
       procedure CopySelectedLocalGamesToSDCard;
       procedure StartCopySelectedLocalGamesToSDCard(onCopyFished: PStartCopySelectedLocalGamesToSDCard = nil);
       procedure SelectLocalGameToCopy(index: integer);
       procedure SelectSDCardGameToRemove(index: integer);
       procedure ClearSelectedLocalGamesToCopy;
       procedure ClearSelectedSDCardGamesToRemove;
-      procedure UpdateGDEmuINI;
       procedure CreateGDEmuImage;
       procedure CreateOpenBORDisc(name: String; coverImagePath: string; mainPakFilePath: string; otherFilesPaths: TStrings; outputPath: string);
       procedure CreateInfoCacheFile(game: TGDEmuGame);
@@ -196,6 +194,8 @@ type
       procedure ClearCommandLog;
     private
       function TryGetCoverFromGamesDatabase(game: TGDEmuGame; searchTerms: TStringList): String;
+      function TryGetCoverFromTheGamesDB(game: TGDEmuGame; searchTerms: TStringList): String;
+      function TryGetCoverFromScreenScraper(game: TGDEmuGame; searchTerms: TStringList): String;
       function DownloadAndValidateImage(imageUrl: String; cacheFilename: String): Boolean;
       function EncodeURLComponent(const s: String): String;
       function CleanGameNameForSearch(const gameName: String): String;
@@ -953,6 +953,7 @@ end;
 procedure TGDEmu.CreateGDEmuImage;
 var
     NewGDEmuListIni: TStringList;
+    tempFiles: TStringList;
     i: integer;
 begin
   NewGDEmuListIni:=TStringList.Create;
@@ -985,7 +986,15 @@ begin
     ConcatPaths([ApplicationPath,'ini','GDEMU.INI']),
     ConcatPaths([SDCardGamesDirectory,'GDEMU.INI'])
   );
-  DeleteFile( ConcatPaths([ApplicationPath,'temp','*.*']) );
+  // Clean the temp directory (DeleteFile does not support wildcards)
+  tempFiles:=TStringList.Create;
+  try
+    FileUtil.FindAllFiles(tempFiles, ConcatPaths([ApplicationPath,'temp']), '*', False, faAnyFile);
+    for i:=0 to tempFiles.Count -1 do
+      DeleteFile(tempFiles[i]);
+  finally
+    tempFiles.Free;
+  end;
 end;
 
 procedure TGDEmu.ClearSDCardGamesDirectories;
@@ -1052,11 +1061,6 @@ begin
   end;
   // Rescan SD Card
   ScanSDCardGamesDirectory;
-end;
-
-procedure TGDEmu.FixSDCardFolders;
-begin
-
 end;
 
 procedure TGDEmu.CopySelectedLocalGamesToSDCard;
@@ -1169,11 +1173,6 @@ begin
   SetLength(SelectedSDCardGamesToRemoveList,SelectedSDCardGamesToRemoveListCount + 1);
   SelectedSDCardGamesToRemoveList[SelectedSDCardGamesToRemoveListCount]:=index;
   SelectedSDCardGamesToRemoveListCount:=SelectedSDCardGamesToRemoveListCount + 1;
-end;
-
-procedure TGDEmu.UpdateGDEmuINI;
-begin
-
 end;
 
 function TGDEmu.GetGameCover(game: TGDEmuGame): String;

@@ -1,1 +1,0 @@
-find /tmp -name "api-umbrella-geoip-auto-updater.*" -print0 | xargs -0 rm
