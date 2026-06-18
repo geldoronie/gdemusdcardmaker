@@ -7,8 +7,8 @@ interface
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, CheckLst, ExtCtrls,
   Menus, Buttons, StdCtrls, ComCtrls, localgamesdirectorieswindows, gdemuunit,
-  progresswindowunity, LCLType, aboutwindowunit, openborcreatorwindowunit,
-  commandlogwindowunit;
+  gamemodel, progresswindowunity, LCLType, aboutwindowunit,
+  openborcreatorwindowunit, commandlogwindowunit;
 
 type
 

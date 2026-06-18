@@ -7,31 +7,12 @@ interface
 uses
   Classes, SysUtils, FileUtil, Dialogs, md5, RegExpr, process, fphttpclient,
   openssl, opensslsockets, DOM_HTML, DOM, SAX_HTML, Graphics, Dos, fpjson,
-  jsonparser, jsonConf, URIParser;
+  jsonparser, jsonConf, URIParser, gamemodel;
 
 type
 
     { Forward declarations }
     TGDEmu = class;
-
-    { TGDEmuGame }
-    TGDEmuGame = class
-      Id: String;
-      Name: String;
-      LegalName: String;
-      InternalName: String;
-      SlugName: String;
-      Path: String;
-      Extension: String;
-      Index: integer;
-      Date: String;
-      Version: String;
-      Region: String;
-      VGA: String;
-      Disc: String;
-      DiscName: String;
-      CatalogID: String;
-    end;
 
     { THexDump }
 
@@ -202,10 +183,6 @@ type
 
 var
   GDEmu: TGDEmu;
-
-function GetGameName(GamePath: String): String;
-function GetGameSlugName(name: String): String;
-function GetGameLegalName(name: String): String;
 
 implementation
 
@@ -672,34 +649,6 @@ end;
 
 { TGDEmu }
 
-function GetGameName(GamePath: String): String;
-var nameTextFile: TStringList;
-begin
-  nameTextFile:=TStringList.Create;
-  if SysUtils.FileExists(ConcatPaths([GamePath,'name.txt'])) then
-  begin
-    nameTextFile.LoadFromFile(ConcatPaths([GamePath,'name.txt']));
-    Result:=nameTextFile.Text;
-  end
-  else
-    Result:=SysUtils.ExtractFileName(GamePath);
-  nameTextFile.Destroy;
-end;
-
-function GetGameSlugName(name: String): String;
-var slugName: String;
-begin
-  slugName:=ReplaceRegExpr('[^.a-zA-Z0-9-\ ]+', name, '', False);
-  slugName:=LowerCase(Trim(StringReplace(slugName, ' ', '-', [rfReplaceAll])));
-  Result:=slugName;
-end;
-
-function GetGameLegalName(name: String): String;
-var legalName: String;
-begin
-  legalName:=ReplaceRegExpr('[^.a-zA-Z0-9-\ ]+', name, '', False);
-  Result:=Trim(legalName);
-end;
 
 procedure TGDEmu.Execute;
 begin
