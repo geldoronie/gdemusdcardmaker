@@ -29,9 +29,10 @@ Monólito numa única `TThread` que faz scan, cópia, geração de CDI, scraping
   `DeleteFile(...'*.*')` usa wildcard que não funciona em `DeleteFile`;
   2 das 3 fontes de capa (TheGamesDB, ScreenScraper) estão implementadas mas **nunca usadas**
   (só GamesDatabase.org está ativa).
-- **Portabilidade:** paths Unix hardcoded (`/usr/bin/hexdump`, `/usr/bin/python`; o `gditools.py`
-  é Python 2.7), zero `{$IFDEF WINDOWS/DARWIN}`, e todos os binários em `tools/` são ELF Linux
-  x86-64. **Hoje só roda em Linux.**
+- **Portabilidade:** `hexdump` e `python` hardcoded já foram **eliminados** (leitura de IP.BIN e
+  extração de boot sector agora são Pascal nativo). Resta: zero `{$IFDEF WINDOWS/DARWIN}` e os
+  binários em `tools/` (`genisoimage`, `cdi4dc`, `cdirip`, …) são ELF Linux x86-64. **Hoje só
+  roda em Linux.**
 - **Robustez:** `Execute` da thread sem `try/except`; cache JSON sem versionamento;
   HTTP sem retry/throttle; User-Agent fixo "Linux".
 
@@ -80,9 +81,12 @@ Destrava todas as fases seguintes.
       `ExternalTools`.
 - [ ] Camada `ExternalTools` com abstração por SO (`{$IFDEF WINDOWS/DARWIN/UNIX}`) e
       descoberta de executáveis no PATH.
-- [ ] Ler o `IP.BIN` direto em Pascal (struct de offsets fixos) e **eliminar as 7 chamadas a
+- [x] Ler o `IP.BIN` direto em Pascal (struct de offsets fixos) e **eliminar as 7 chamadas a
       `hexdump`** por jogo.
-- [ ] Migrar `gditools.py` para Python 3 (ou reimplementar a extração necessária).
+- [x] **Reimplementar a extração do boot sector de `.gdi` em Pascal nativo**
+      (`ExtractGDIBootSector`) e **remover a dependência de `gditools.py`/Python** — que estava
+      quebrada sob Python 3 (sem Python 2 nas distros atuais). `tools/gditools.py` e
+      `tools/iso9660.py` removidos. Validado byte-a-byte nos modos de setor 2352 e 2048.
 - [ ] Mover `tools/`/`data/` para release-assets/submódulo + script de download por plataforma;
       então removê-los do tracking com segurança.
 - [ ] `try/except` no `Execute` da thread + relato de erro estruturado.

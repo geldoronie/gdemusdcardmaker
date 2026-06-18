@@ -262,6 +262,97 @@ begin
   end;
 end;
 
+// Extract the Dreamcast boot sector (IP.BIN) natively from a .gdi dump.
+// IP.BIN is the first 16 user-data sectors (16 * 2048 = 32768 bytes) of the
+// high-density data track, which by the GD-ROM spec starts at LBA 45000.
+// This replaces the former gditools.py/Python 2 dependency, which was the only
+// thing the app used Python for (and which no longer runs under Python 3).
+function ExtractGDIBootSector(const GdiPath, OutIpBin: String): Boolean;
+const
+  BOOT_SECTORS = 16;
+  USER_BYTES   = 2048;
+var
+  lines, parts: TStringList;
+  gdiDir, trackFile, rawName: String;
+  i, lba, sectorSize, userOffset, sector: Integer;
+  found: Boolean;
+  src, dst: TFileStream;
+  buf: array of Byte;
+begin
+  Result:=False;
+  if not FileExists(GdiPath) then
+    Exit;
+  gdiDir:=ExtractFileDir(GdiPath);
+
+  found:=False;
+  trackFile:='';
+  sectorSize:=0;
+  lines:=TStringList.Create;
+  parts:=TStringList.Create;
+  try
+    lines.LoadFromFile(GdiPath);
+    parts.Delimiter:=' ';
+    parts.QuoteChar:='"';
+    parts.StrictDelimiter:=False; // also split on tabs; merge runs of whitespace
+    // Track line format: tnum lba type sectorsize filename offset
+    for i:=0 to lines.Count -1 do
+    begin
+      if Trim(lines[i]) = '' then
+        Continue;
+      parts.DelimitedText:=Trim(lines[i]);
+      if parts.Count < 5 then
+        Continue; // header line (track count) or malformed
+      lba:=StrToIntDef(parts[1], -1);
+      if lba = 45000 then
+      begin
+        sectorSize:=StrToIntDef(parts[3], 2352);
+        rawName:=StringReplace(parts[4], '\', PathDelim, [rfReplaceAll]);
+        trackFile:=ConcatPaths([gdiDir, rawName]);
+        found:=True;
+        Break;
+      end;
+    end;
+  finally
+    parts.Free;
+    lines.Free;
+  end;
+
+  if (not found) or (not FileExists(trackFile)) then
+    Exit;
+
+  // Offset of the 2048-byte user payload within each raw sector
+  case sectorSize of
+    2352: userOffset:=16; // Mode 1: 12 sync + 4 header
+    2336: userOffset:=8;  // Mode 2
+    2048: userOffset:=0;  // already cooked
+  else
+    Exit;                 // unsupported sector size
+  end;
+
+  SetLength(buf, USER_BYTES);
+  src:=nil;
+  dst:=nil;
+  try
+    src:=TFileStream.Create(trackFile, fmOpenRead or fmShareDenyWrite);
+    if src.Size < Int64(BOOT_SECTORS) * sectorSize then
+      Exit;
+    dst:=TFileStream.Create(OutIpBin, fmCreate);
+    for sector:=0 to BOOT_SECTORS -1 do
+    begin
+      src.Position:=Int64(sector) * sectorSize + userOffset;
+      if src.Read(buf[0], USER_BYTES) <> USER_BYTES then
+        Exit;
+      dst.WriteBuffer(buf[0], USER_BYTES);
+    end;
+    Result:=True;
+  finally
+    if Assigned(dst) then
+      dst.Free;
+    if Assigned(src) then
+      src.Free;
+  end;
+end;
+
 { THexDump }
 
 constructor THexDump.Create;
@@ -344,8 +435,10 @@ end;
 
 constructor TGDIToolsProcess.Create;
 begin
-  ExecutablePath:='gditools.py';
-  Executable:='/usr/bin/python';
+  // IP.BIN is now extracted natively (see ExtractGDIBootSector); no external
+  // Python/gditools.py interpreter is invoked anymore.
+  ExecutablePath:='';
+  Executable:='';
   GDEmuInstance:=nil;
 end;
 
@@ -356,23 +449,18 @@ end;
 
 function TGDIToolsProcess.GetMetaFile(GamePath: String; outputPath: String): String;
 var
-  outputString: ansistring;
+  ipBinPath: String;
 begin
-  RunCommandWithLog(
-    Executable,
-    [
-      ConcatPaths([ApplicationPath,'tools',ExecutablePath]),
-      '-i',
-      GamePath,
-      '-b',
-      ConcatPaths([outputPath,'ip.bin'])
-    ],
-    outputString,
-    [poWaitOnExit],
-    swoNone,
-    GDEmuInstance
-  );
-  Result:=outputString;
+  Result:='';
+  ipBinPath:=ConcatPaths([outputPath,'ip.bin']);
+  if ExtractGDIBootSector(GamePath, ipBinPath) then
+  begin
+    if GDEmuInstance <> nil then
+      GDEmuInstance.AddCommandLog('IP.BIN extracted (native GDI)', ipBinPath);
+    Result:=ipBinPath;
+  end
+  else if GDEmuInstance <> nil then
+    GDEmuInstance.AddCommandLog('IP.BIN extraction failed (native GDI)', GamePath);
 end;
 
 { TGenISOImage }

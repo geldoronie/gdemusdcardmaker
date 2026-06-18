@@ -17,7 +17,8 @@ Two widgetset builds are produced: **Qt5** and **GTK2**.
 - **Qt5 build:** `libqt5pas-dev`
 - **GTK2 build:** `libgtk-2-dev`
 - **Runtime tools:** `cdrkit` (provides `genisoimage`); the remaining helpers
-  (`cdi4dc`, `cdirip`, `gditools.py`, …) are bundled under `tools/`.
+  (`cdi4dc`, `cdirip`, …) are bundled under `tools/`. GDI boot-sector (`IP.BIN`)
+  extraction is now native Pascal — no Python is required.
 
 > Note: the bundled `tools/` binaries are Linux x86-64 only, so the app currently runs
 > on Linux. Cross-platform support is planned (see the roadmap).
