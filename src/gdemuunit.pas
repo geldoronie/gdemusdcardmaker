@@ -157,6 +157,7 @@ type
       SDCardLoaded: Boolean;
       CurrentAction: String;
       CurrentActionStatus: String;
+      LastError: String; // empty when the last action succeeded
       CurrentCopyToSDCardActionPosition: integer;
       CurrentCopyToSDCardActionCount: integer;
       CurrentCopyToSDCardActionGameName: String;
@@ -685,30 +686,67 @@ end;
 
 procedure TGDEmu.Execute;
 begin
+  // Outer try/except is a backstop: an unexpected exception must never kill the
+  // worker thread (FreeOnTerminate would free it and leave GDEmu dangling).
+  // Each action also handles its own failure so the UI can recover: on error we
+  // still move to FINISHED (the ProgressWindow closes instead of spinning
+  // forever) and fire the finish callback; LastError carries the message.
   while Terminated = False do
   begin
-    if (CurrentAction = 'COPYINGTOSDCARD') and (CurrentActionStatus = 'PENDING') then
-    begin
-      CurrentActionStatus:='COPYING';
-      CopySelectedLocalGamesToSDCard;
-      CurrentActionStatus:='FINISHED';
-      Synchronize(@OnFinishGamesCopy);
-    end;
+    try
+      if (CurrentAction = 'COPYINGTOSDCARD') and (CurrentActionStatus = 'PENDING') then
+      begin
+        CurrentActionStatus:='COPYING';
+        LastError:='';
+        try
+          CopySelectedLocalGamesToSDCard;
+        except
+          on E: Exception do
+          begin
+            LastError:=E.Message;
+            AddCommandLog('ERROR: CopySelectedLocalGamesToSDCard', E.Message);
+          end;
+        end;
+        CurrentActionStatus:='FINISHED';
+        Synchronize(@OnFinishGamesCopy);
+      end;
 
-    if (CurrentAction = 'SCANLOCALGAMESDIRECTORIES') and (CurrentActionStatus = 'PENDING') then
-    begin
-      CurrentActionStatus:='SCANNING';
-      ScanLocalGamesDirectories;
-      CurrentActionStatus:='FINISHED';
-      Synchronize(@OnFinishLocalGamesScan);
-    end;
+      if (CurrentAction = 'SCANLOCALGAMESDIRECTORIES') and (CurrentActionStatus = 'PENDING') then
+      begin
+        CurrentActionStatus:='SCANNING';
+        LastError:='';
+        try
+          ScanLocalGamesDirectories;
+        except
+          on E: Exception do
+          begin
+            LastError:=E.Message;
+            AddCommandLog('ERROR: ScanLocalGamesDirectories', E.Message);
+          end;
+        end;
+        CurrentActionStatus:='FINISHED';
+        Synchronize(@OnFinishLocalGamesScan);
+      end;
 
-    if (CurrentAction = 'SCANSDCARDGAMESDIRECTORIES') and (CurrentActionStatus = 'PENDING') then
-    begin
-      CurrentActionStatus:='SCANNING';
-      ScanSDCardGamesDirectory;
-      CurrentActionStatus:='FINISHED';
-      Synchronize(@OnFinishSDCardGamesScan);
+      if (CurrentAction = 'SCANSDCARDGAMESDIRECTORIES') and (CurrentActionStatus = 'PENDING') then
+      begin
+        CurrentActionStatus:='SCANNING';
+        LastError:='';
+        try
+          ScanSDCardGamesDirectory;
+        except
+          on E: Exception do
+          begin
+            LastError:=E.Message;
+            AddCommandLog('ERROR: ScanSDCardGamesDirectory', E.Message);
+          end;
+        end;
+        CurrentActionStatus:='FINISHED';
+        Synchronize(@OnFinishSDCardGamesScan);
+      end;
+    except
+      on E: Exception do
+        AddCommandLog('ERROR: worker loop', E.Message);
     end;
     Sleep(500);
   end;

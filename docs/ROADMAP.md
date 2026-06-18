@@ -89,7 +89,9 @@ Destrava todas as fases seguintes.
       `tools/iso9660.py` removidos. Validado byte-a-byte nos modos de setor 2352 e 2048.
 - [ ] Mover `tools/`/`data/` para release-assets/submódulo + script de download por plataforma;
       então removê-los do tracking com segurança.
-- [ ] `try/except` no `Execute` da thread + relato de erro estruturado.
+- [x] `try/except` no `Execute` da thread + relato de erro estruturado: cada ação é isolada
+      (falha vira `FINISHED` + `LastError`, a `ProgressWindow` fecha em vez de girar pra sempre e
+      mostra a mensagem); loop externo blindado para a thread worker nunca morrer.
 - [ ] Reativar/limpar as fontes de capa não usadas (TheGamesDB, ScreenScraper) ou removê-las.
 
 ### Fase 2 — Launcher visual

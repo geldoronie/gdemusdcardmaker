@@ -92,6 +92,12 @@ end;
 procedure TProgressWindow.CloseProgress;
 begin
   CounterTimer.Enabled:=False;
+  if GDEMU.LastError <> '' then
+  begin
+    ShowMessage('The operation did not complete successfully:' + LineEnding +
+                LineEnding + GDEMU.LastError);
+    GDEMU.LastError:='';
+  end;
   Close;
 end;
 
