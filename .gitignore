@@ -22,6 +22,12 @@ cache/*
 # Packaged releases (rebuilt from source)
 [rR]eleases
 
+# External helper binaries — fetched on demand by scripts/fetch-tools.sh from the
+# 'tools-v1' GitHub release, no longer stored in git (Linux x86-64, ~770 KB).
+/tools/genisoimage
+/tools/cdi4dc
+/tools/cdirip
+
 # Backups
 **/backup/**
 

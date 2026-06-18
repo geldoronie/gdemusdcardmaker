@@ -34,8 +34,9 @@ done
 
 if [[ "$missing" -ne 0 ]]; then
   echo
-  echo "Some required tools are missing. Install them (see hints above) or place"
-  echo "the binaries under tools/. The app will not be able to build discs without them."
+  echo "Some required tools are missing. The easiest fix is:"
+  echo "    ./scripts/fetch-tools.sh    # downloads them into tools/"
+  echo "Or install them yourself (see hints above) and put them on the PATH."
   exit 1
 fi
 

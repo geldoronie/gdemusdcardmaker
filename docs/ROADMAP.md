@@ -45,10 +45,10 @@ sem grid de capas, sem "selecionar todos", progresso via *polling* de strings de
 - **Git tracking está enxuto:** apenas ~9.9 MB versionados. `releases/` e os binários da raiz
   (`*.bin`/`*.debug`) **já estão ignorados**. Os ~760 MB da working tree são arquivos
   **não-versionados** (`cache/` com ~2200 itens, `releases/`, builds de debug).
-- **`tools/` (1.8 MB) e `data/` (7 MB) são versionados — e isso é intencional por enquanto:**
-  são **dependências de runtime** (executáveis chamados pelo app e boot sectors `IP.BIN`/
-  `1ST_READ.BIN` usados na criação de discos), não artefatos de build. Migram para
-  release-assets/build-from-source na Fase 1, quando houver substituto.
+- **`tools/` foi migrado para release-assets (Fase 1):** os 3 executáveis usados saíram do git
+  e agora vêm do release `tools-v1` via `scripts/fetch-tools.sh`. **`data/` (7 MB) segue
+  versionado** — é dependência de runtime (boot sectors `IP.BIN`/`1ST_READ.BIN` e templates de
+  homebrew usados na criação de discos), não artefato de build.
 - `src/Makefile` continha um comando de limpeza de `/tmp` sem relação com o projeto (removido).
 - Sem CI, sem testes.
 
@@ -95,15 +95,13 @@ Destrava todas as fases seguintes.
       (`ExtractGDIBootSector`) e **remover a dependência de `gditools.py`/Python** — que estava
       quebrada sob Python 3 (sem Python 2 nas distros atuais). `tools/gditools.py` e
       `tools/iso9660.py` removidos. Validado byte-a-byte nos modos de setor 2352 e 2048.
-- [~] Mover `tools/`/`data/` para release-assets/submódulo + script de download por plataforma;
-      então removê-los do tracking com segurança.
-      **Feito:** removidos 8 binários de `tools/` que o código nunca invoca (`devdump`, `dirsplit`,
-      `geteltorito`, `isodump`, `isoinfo`, `isovfy`, `mkzftree`, `mkisofs` — ~966 KB de peso morto);
-      restam só os 3 usados (`genisoimage`, `cdi4dc`, `cdirip`). Corrigido o bit de execução de
-      `tools/cdirip` (estava `100644` → falharia ao rodar). Adicionado `scripts/check-tools.sh`.
-      **Falta (decisão do mantenedor):** definir onde hospedar os 3 binários (release do GitHub /
-      build-from-source) antes de destrackeá-los; `data/` permanece tracked (é dep de runtime real:
-      boot sectors + templates de homebrew).
+- [x] Mover `tools/` para release-assets + script de download; então removê-los do tracking.
+      Removidos 8 binários nunca invocados (`devdump`, `dirsplit`, `geteltorito`, `isodump`,
+      `isoinfo`, `isovfy`, `mkzftree`, `mkisofs`). Os 3 usados (`genisoimage`, `cdi4dc`, `cdirip`)
+      foram publicados no release **`tools-v1`** e **destrackeados do git**; `scripts/fetch-tools.sh`
+      os baixa para `tools/` com verificação sha256, e `scripts/check-tools.sh` valida o setup.
+      Corrigido o bit de execução de `cdirip` (estava `100644`). `data/` permanece tracked (dep de
+      runtime real: boot sectors + templates de homebrew).
 - [x] `try/except` no `Execute` da thread + relato de erro estruturado: cada ação é isolada
       (falha vira `FINISHED` + `LastError`, a `ProgressWindow` fecha em vez de girar pra sempre e
       mostra a mensagem); loop externo blindado para a thread worker nunca morrer.
