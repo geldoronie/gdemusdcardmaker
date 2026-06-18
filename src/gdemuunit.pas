@@ -66,7 +66,6 @@ type
     private
       ApplicationPath: String;
       ExecutablePath: String;
-      Executable: String;
       GDEmuInstance: TGDEmu;
     public
       constructor Create;
@@ -81,7 +80,6 @@ type
     private
       ApplicationPath: String;
       ExecutablePath: String;
-      Executable: String;
       GDEmuInstance: TGDEmu;
     public
       constructor Create;
@@ -95,7 +93,6 @@ type
     private
       ApplicationPath: String;
       ExecutablePath: String;
-      Executable: String;
       GDEmuInstance: TGDEmu;
     public
       constructor Create;
@@ -234,6 +231,27 @@ begin
     if OutputString <> '' then
       WriteLn(OutputString);
   end;
+end;
+
+// Resolve an external helper tool to a runnable path. This is the single point
+// of OS abstraction for invoking bundled binaries: it prefers the binary shipped
+// under tools/ and falls back to whatever is on the system PATH. On Windows it
+// appends the .exe suffix when missing. Returns '' if nothing runnable is found.
+function ResolveToolPath(const AppPath, ToolName: String): String;
+var
+  exeName, bundled: String;
+begin
+  exeName:=ToolName;
+  {$IFDEF WINDOWS}
+  if ExtractFileExt(exeName) = '' then
+    exeName:=exeName + '.exe';
+  {$ENDIF}
+  // 1. Bundled binary under tools/ (relative to the application directory).
+  bundled:=ConcatPaths([AppPath, 'tools', exeName]);
+  if FileExists(bundled) then
+    Exit(bundled);
+  // 2. Anything matching on the system PATH.
+  Result:=FindDefaultExecutablePath(exeName);
 end;
 
 // Read a raw byte range from a file as a string (1 byte -> 1 char).
@@ -468,8 +486,9 @@ end;
 
 constructor TGenISOImage.Create;
 begin
+  // ExecutablePath is the bare tool name; ResolveToolPath maps it to a runnable
+  // path (bundled tools/ first, then system PATH).
   ExecutablePath:='genisoimage';
-  Executable:='tools/genisoimage';
   GDEmuInstance:=nil;
 end;
 
@@ -484,7 +503,7 @@ var
 begin
   //genisoimage -C 0,11702 -V GDMENU -G data/ip.bin -r -J -l -input-charset iso8859-1 -o gdmenu.iso data/1ST_READ.BIN $GDMENU_INI
   RunCommandWithLog(
-    ConcatPaths([ApplicationPath, Executable]),
+    ResolveToolPath(ApplicationPath, ExecutablePath),
     [
       '-C',
       '0,11702',
@@ -550,7 +569,7 @@ begin
   end;
   commandOut.AddStrings(parameters);
   RunCommandWithLog(
-    ConcatPaths([ApplicationPath, Executable]),
+    ResolveToolPath(ApplicationPath, ExecutablePath),
     parameters.ToStringArray,
     outputString,
     [poStderrToOutPut,poWaitOnExit],
@@ -567,8 +586,7 @@ end;
 
 constructor TCDI4DC.Create;
 begin
-  ExecutablePath:='';
-  Executable:='tools/cdi4dc';
+  ExecutablePath:='cdi4dc';
   GDEmuInstance:=nil;
 end;
 
@@ -582,7 +600,7 @@ var
   outputString: ansistring;
 begin
   RunCommandWithLog(
-    ConcatPaths([ApplicationPath,Executable]),
+    ResolveToolPath(ApplicationPath, ExecutablePath),
     [
       inputPath,
       outputPath
@@ -598,8 +616,7 @@ end;
 
 constructor TCDIRIP.Create;
 begin
-  ExecutablePath:='';
-  Executable:='tools/cdirip';
+  ExecutablePath:='cdirip';
   GDEmuInstance:=nil;
 end;
 
@@ -621,7 +638,7 @@ begin
   DeleteDirectory(ConcatPaths([outputPath,'cdicache']), False);
   CreateDir(ConcatPaths([outputPath,'cdicache']));
   RunCommandWithLog(
-    ConcatPaths([ApplicationPath,Executable]),
+    ResolveToolPath(ApplicationPath, ExecutablePath),
     [
       inputPath,
       ConcatPaths([outputPath,'cdicache'])

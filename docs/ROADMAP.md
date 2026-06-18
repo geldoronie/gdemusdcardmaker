@@ -79,8 +79,12 @@ Destrava todas as fases seguintes.
 - [ ] Quebrar `gdemuunit.pas` em unidades coesas:
       `GameModel`, `MetadataExtractor`, `DiscBuilder`, `CoverScraper`, `SDCardManager`,
       `ExternalTools`.
-- [ ] Camada `ExternalTools` com abstração por SO (`{$IFDEF WINDOWS/DARWIN/UNIX}`) e
-      descoberta de executáveis no PATH.
+- [~] Camada `ExternalTools` com abstração por SO e descoberta de executáveis no PATH.
+      **Feito:** `ResolveToolPath` — ponto único de resolução (binário em `tools/` primeiro,
+      depois `FindDefaultExecutablePath` no PATH; sufixo `.exe` via `{$IFDEF WINDOWS}`); as três
+      classes de ferramentas (`TGenISOImage`/`TCDI4DC`/`TCDIRIP`) passam só o nome "bare".
+      **Falta:** extrair para unidade dedicada e subpastas `tools/<os>/` por plataforma
+      (junto da modularização).
 - [x] Ler o `IP.BIN` direto em Pascal (struct de offsets fixos) e **eliminar as 7 chamadas a
       `hexdump`** por jogo.
 - [x] **Reimplementar a extração do boot sector de `.gdi` em Pascal nativo**
