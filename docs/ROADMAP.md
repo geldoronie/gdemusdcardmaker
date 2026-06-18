@@ -76,27 +76,40 @@ Alicerce de baixo risco, sem mexer em lógica.
 ### Fase 1 — Modularizar o motor + portabilidade
 Destrava todas as fases seguintes.
 
-- [ ] Quebrar `gdemuunit.pas` em unidades coesas:
+- [~] Quebrar `gdemuunit.pas` em unidades coesas:
       `GameModel`, `MetadataExtractor`, `DiscBuilder`, `CoverScraper`, `SDCardManager`,
       `ExternalTools`.
-- [~] Camada `ExternalTools` com abstração por SO e descoberta de executáveis no PATH.
-      **Feito:** `ResolveToolPath` — ponto único de resolução (binário em `tools/` primeiro,
-      depois `FindDefaultExecutablePath` no PATH; sufixo `.exe` via `{$IFDEF WINDOWS}`); as três
-      classes de ferramentas (`TGenISOImage`/`TCDI4DC`/`TCDIRIP`) passam só o nome "bare".
-      **Falta:** extrair para unidade dedicada e subpastas `tools/<os>/` por plataforma
-      (junto da modularização).
+      **Feito:** `GameModel` (`src/gamemodel.pas` — `TGDEmuGame` + helpers de nome) e
+      `ExternalTools` (`src/externaltools.pas` — 5 wrappers de ferramenta + helpers, desacoplados
+      do motor via callback `TCommandLogger`). Monólito caiu de ~2245 → ~1640 linhas.
+      **Falta:** extrair `MetadataExtractor`/`DiscBuilder`/`CoverScraper`/`SDCardManager` — isso
+      exige reestruturar a god-class `TGDEmu` (seus ~50 campos de estado), trabalho maior e mais
+      arriscado, a fazer incrementalmente.
+- [x] Camada `ExternalTools` com abstração por SO e descoberta de executáveis no PATH:
+      `ResolveToolPath` (binário em `tools/` primeiro, depois `FindDefaultExecutablePath` no PATH;
+      sufixo `.exe` via `{$IFDEF WINDOWS}`); extraída para `src/externaltools.pas`.
+      Subpastas `tools/<os>/` por plataforma ficam para quando houver binários não-Linux.
 - [x] Ler o `IP.BIN` direto em Pascal (struct de offsets fixos) e **eliminar as 7 chamadas a
       `hexdump`** por jogo.
 - [x] **Reimplementar a extração do boot sector de `.gdi` em Pascal nativo**
       (`ExtractGDIBootSector`) e **remover a dependência de `gditools.py`/Python** — que estava
       quebrada sob Python 3 (sem Python 2 nas distros atuais). `tools/gditools.py` e
       `tools/iso9660.py` removidos. Validado byte-a-byte nos modos de setor 2352 e 2048.
-- [ ] Mover `tools/`/`data/` para release-assets/submódulo + script de download por plataforma;
+- [~] Mover `tools/`/`data/` para release-assets/submódulo + script de download por plataforma;
       então removê-los do tracking com segurança.
+      **Feito:** removidos 8 binários de `tools/` que o código nunca invoca (`devdump`, `dirsplit`,
+      `geteltorito`, `isodump`, `isoinfo`, `isovfy`, `mkzftree`, `mkisofs` — ~966 KB de peso morto);
+      restam só os 3 usados (`genisoimage`, `cdi4dc`, `cdirip`). Corrigido o bit de execução de
+      `tools/cdirip` (estava `100644` → falharia ao rodar). Adicionado `scripts/check-tools.sh`.
+      **Falta (decisão do mantenedor):** definir onde hospedar os 3 binários (release do GitHub /
+      build-from-source) antes de destrackeá-los; `data/` permanece tracked (é dep de runtime real:
+      boot sectors + templates de homebrew).
 - [x] `try/except` no `Execute` da thread + relato de erro estruturado: cada ação é isolada
       (falha vira `FINISHED` + `LastError`, a `ProgressWindow` fecha em vez de girar pra sempre e
       mostra a mensagem); loop externo blindado para a thread worker nunca morrer.
-- [ ] Reativar/limpar as fontes de capa não usadas (TheGamesDB, ScreenScraper) ou removê-las.
+- [x] Reativar/limpar as fontes de capa não usadas: removidas `TryGetCoverFromTheGamesDB` e
+      `TryGetCoverFromScreenScraper` (~300 linhas de código morto nunca chamado). `GetGameCover`
+      usa só GamesDatabase.org.
 
 ### Fase 2 — Launcher visual
 - [ ] Grid de capas (reusando o cache existente) com lazy-load.

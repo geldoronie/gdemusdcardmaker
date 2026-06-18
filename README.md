@@ -16,12 +16,15 @@ Two widgetset builds are produced: **Qt5** and **GTK2**.
 - **Free Pascal** + **Lazarus** (`lazbuild`, `fpc`)
 - **Qt5 build:** `libqt5pas-dev`
 - **GTK2 build:** `libgtk-2-dev`
-- **Runtime tools:** `cdrkit` (provides `genisoimage`); the remaining helpers
-  (`cdi4dc`, `cdirip`, …) are bundled under `tools/`. GDI boot-sector (`IP.BIN`)
-  extraction is now native Pascal — no Python is required.
+- **Runtime tools:** exactly three external binaries — `genisoimage` (from
+  `cdrkit`), `cdi4dc` and `cdirip`. They are bundled under `tools/`, but the app
+  also finds them on the system `PATH` (see `ResolveToolPath`), so installing
+  them system-wide works too. Run `scripts/check-tools.sh` to verify your setup.
+  GDI boot-sector (`IP.BIN`) extraction is native Pascal — no Python is required.
 
-> Note: the bundled `tools/` binaries are Linux x86-64 only, so the app currently runs
-> on Linux. Cross-platform support is planned (see the roadmap).
+> Note: the bundled `tools/` binaries are Linux x86-64 only. On other platforms,
+> install/build the three tools and put them on the `PATH`. Full cross-platform
+> support is planned (see the roadmap).
 
 ### Compile
 
