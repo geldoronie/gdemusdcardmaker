@@ -1318,6 +1318,7 @@ var
     cacheInfoFileName: String;
     cacheInfoFilePath: String;
     cachedInternalName: String;
+    cachedExtension: String;
 begin
   cacheInfoFileName:=game.SlugName + '.json';
   cacheInfoFilePath:=ConcatPaths([ApplicationPath,'cache',cacheInfoFileName]);
@@ -1330,7 +1331,13 @@ begin
       gameCaheInfoFile.Filename:=cacheInfoFilePath;
       game.Name:=UTF8Encode(gameCaheInfoFile.GetValue('name',game.Name));
       game.DiscName:=UTF8Encode(gameCaheInfoFile.GetValue('discName', game.DiscName));
-      game.Extension:=UTF8Encode(gameCaheInfoFile.GetValue('extension',game.Extension));
+      // NÃO sobrescrever game.Extension a partir do cache: a extensão vem do scan
+      // dos arquivos reais da pasta (.gdi/.cdi) e é autoritativa. O cache é keyed
+      // pelo SlugName, que para jogos locais é o nome da pasta (ex.: "15") — então
+      // um cache stale de OUTRO cartão (onde a pasta 15 era .cdi) poluiria a
+      // extensão e mandaria a re-extração pelo caminho errado (cdirip num .gdi),
+      // resultando em metadados vazios. Mantemos a extensão detectada no scan.
+      cachedExtension:=UTF8Encode(gameCaheInfoFile.GetValue('extension', game.Extension));
       game.CatalogID:=UTF8Encode(gameCaheInfoFile.GetValue('catalogID', game.CatalogID));
       game.Date:=UTF8Encode(gameCaheInfoFile.GetValue('data', game.Date));
       game.Disc:=UTF8Encode(gameCaheInfoFile.GetValue('disc', game.Disc));
@@ -1339,10 +1346,21 @@ begin
       game.InternalName:=cachedInternalName;
       
       AddCommandLog('Cache loaded', Format('InternalName from cache: [%s], Length: %d', [cachedInternalName, Length(cachedInternalName)]));
-      
+
+      // Cache stale por colisão de SlugName entre cartões: se a extensão gravada no
+      // cache diverge da extensão real detectada no scan, o cache é de OUTRO disco.
+      // Invalidamos zerando o InternalName, o que dispara a re-extração no chamador
+      // (GetMetaFileInfo), agora pelo caminho correto da extensão real.
+      if (cachedExtension <> '') and (game.Extension <> '') and
+         (SysUtils.LowerCase(cachedExtension) <> SysUtils.LowerCase(game.Extension)) then
+      begin
+        AddCommandLog('Cache stale', Format('Extensão do cache [%s] != extensão real [%s]; forçando re-extração', [cachedExtension, game.Extension]));
+        game.InternalName:='';
+      end;
+
       // Se o InternalName no cache está vazio, pode ser que o cache foi criado antes da extração
       // Nesse caso, vamos forçar uma nova extração
-      if cachedInternalName = '' then
+      if game.InternalName = '' then
       begin
         AddCommandLog('Cache has empty InternalName', 'Will force re-extraction');
       end;
