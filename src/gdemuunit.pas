@@ -281,7 +281,11 @@ begin
        begin
          SetLength(LocalGamesList,LocalGamesListCount + 1);
          LocalGamesList[LocalGamesListCount]:=TGDEmuGame.Create;
-         LocalGamesList[LocalGamesListCount].Name:=SysUtils.ExtractFileName(Directories[j]);
+         // Nome do jogo via GetGameName (lê name.txt; cai no nome da pasta quando
+         // não existe) — mesma regra do scan do SD. Antes usava só o nome da pasta,
+         // o que mostrava o número (ex.: "15") quando a origem era um cartão GDEMU,
+         // e gravava esse número no name.txt do destino ao copiar.
+         LocalGamesList[LocalGamesListCount].Name:=Trim(GetGameName(Directories[j]));
          LocalGamesList[LocalGamesListCount].SlugName:=GetGameSlugName(LocalGamesList[LocalGamesListCount].Name);
          LocalGamesList[LocalGamesListCount].Path:=Directories[j];
 
