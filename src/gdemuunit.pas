@@ -329,6 +329,7 @@ end;
 
 procedure TGDEmu.ScanSDCardGamesDirectory;
 var i: integer;
+    folderIndex: integer;
     Directories: TStringList;
     GameDirectoryContentGDI: TStringList;
     GameDirectoryContentCDI: TStringList;
@@ -347,11 +348,16 @@ begin
      FileUtil.FindAllFiles(GameDirectoryContentCDI,Directories[i],'*.cdi', False, faAnyFile);
      CurrentSDCardGamesScanActionGameName:=SysUtils.ExtractFileName(Directories[i]);
 
+     // Slots GDEMU são pastas numeradas (01, 02, …). StrToIntDef evita estourar
+     // EConvertError em pastas não-numéricas (BKP, DS, ou uma coleção de ISOs com
+     // pastas nomeadas pelo jogo) — elas simplesmente são ignoradas aqui.
+     folderIndex:=SysUtils.StrToIntDef(SysUtils.ExtractFileName(Directories[i]), -1);
+
      if (
            (GameDirectoryContentGDI.Count > 0) or
            (GameDirectoryContentCDI.Count > 0)
         ) and
-        (SysUtils.StrToInt(SysUtils.ExtractFileName(Directories[i])) > 1)
+        (folderIndex > 1)
      then
      begin
        SetLength(SDCardGamesList,SDCardGamesListCount + 1);
@@ -368,7 +374,7 @@ begin
          SDCardGamesList[SDCardGamesListCount].Extension:=SysUtils.ExtractFileExt(GameDirectoryContentCDI[0]);
        end;
 
-       SDCardGamesList[SDCardGamesListCount].Index:=SysUtils.StrToInt(SysUtils.ExtractFileName(Directories[i]));
+       SDCardGamesList[SDCardGamesListCount].Index:=folderIndex;
 
        CacheList.Add(SDCardGamesList[SDCardGamesListCount].SlugName);
 
