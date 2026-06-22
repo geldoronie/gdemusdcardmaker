@@ -57,6 +57,7 @@ type
       GDEmuListIni: TStringList;
       GameDatabaseSearch: TGameDatabaseSearch;
       LibretroBoxartIndex: TStringList; // cache em memória do índice de capas DC
+      CatalogTable: TStringList; // cache do catálogo (normname=genero|ano|dev)
       LocalGamesDirectoriesList: TStringList;
       SDCardGamesDirectory: String;
       LocalGamesList: Array of TGDEmuGame;
@@ -95,6 +96,8 @@ type
       function GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
       procedure SaveLibrary;
       function LoadLibrary: Boolean;
+      function GetCatalogTable: TStringList;
+      procedure EnrichGameFromCatalog(game: TGDEmuGame);
       procedure UpdateSDCardGameList;
       procedure ClearLocalGamesDirectories;
       procedure ClearSDCardGamesDirectories;
@@ -235,6 +238,7 @@ begin
   CDIRIP:=TCDIRIP.Create;
   HTTPClient:=TFPHttpClient.Create(nil);
   LibretroBoxartIndex:=nil;
+  CatalogTable:=nil;
   InitSSLInterface;
 end;
 
@@ -314,6 +318,7 @@ begin
          CacheList.Add(LocalGamesList[LocalGamesListCount].SlugName);
          GetMetaFileInfo(LocalGamesList[LocalGamesListCount]);
          CreateInfoCacheFile(LocalGamesList[LocalGamesListCount]);
+         EnrichGameFromCatalog(LocalGamesList[LocalGamesListCount]);
 
          LocalGamesListCount:=LocalGamesListCount + 1;
          CacheList.SaveToFile(ConcatPaths([ApplicationPath,'cache','cache.list']));
@@ -515,6 +520,8 @@ begin
         game.Developer:=gObj.Get('developer', '');
         game.ReleaseYear:=gObj.Get('releaseYear', '');
         game.Genre:=gObj.Get('genre', '');
+        if (game.Genre = '') and (game.Developer = '') and (game.ReleaseYear = '') then
+          EnrichGameFromCatalog(game); // back-fill de bibliotecas antigas
         LocalGamesList[i]:=game;
       end;
       LocalGamesListCount:=gamesArr.Count;
@@ -525,6 +532,73 @@ begin
   finally
     data.Free;
   end;
+end;
+
+// Carrega (lazy) o catálogo embutido data/dc_catalog.tsv para um TStringList
+// indexado por nome normalizado: "normname=genero|ano|developer", ordenado para
+// busca binária via IndexOfName.
+function TGDEmu.GetCatalogTable: TStringList;
+var
+  raw: TStringList;
+  i: integer;
+  parts: TStringArray;
+  gen, yr, dv, catPath: String;
+begin
+  if CatalogTable <> nil then Exit(CatalogTable);
+  CatalogTable:=TStringList.Create;
+  CatalogTable.NameValueSeparator:='=';
+  catPath:=ConcatPaths([ApplicationPath,'data','dc_catalog.tsv']);
+  if not FileExists(catPath) then Exit(CatalogTable);
+  raw:=TStringList.Create;
+  try
+    raw.LoadFromFile(catPath);
+    for i:=0 to raw.Count -1 do
+    begin
+      if raw[i] = '' then Continue;
+      parts:=raw[i].Split([#9]);
+      if Length(parts) < 1 then Continue;
+      gen:=''; yr:=''; dv:='';
+      if Length(parts) > 2 then gen:=parts[2];
+      if Length(parts) > 3 then yr:=parts[3];
+      if Length(parts) > 4 then dv:=parts[4];
+      CatalogTable.Add(parts[0] + '=' + gen + '|' + yr + '|' + dv);
+    end;
+    CatalogTable.Sorted:=True;
+    AddCommandLog('Catálogo carregado', Format('%d jogos', [CatalogTable.Count]));
+  finally
+    raw.Free;
+  end;
+  Result:=CatalogTable;
+end;
+
+// Preenche Genre/ReleaseYear/Developer de um jogo casando pelo nome normalizado
+// contra o catálogo embutido. Tenta o nome do arquivo e, se falhar, o InternalName.
+procedure TGDEmu.EnrichGameFromCatalog(game: TGDEmuGame);
+var
+  tbl: TStringList;
+  key, val: String;
+  idx: integer;
+  parts: TStringArray;
+begin
+  if game = nil then Exit;
+  tbl:=GetCatalogTable;
+  if tbl.Count = 0 then Exit;
+
+  key:=NormalizeForMatch(CleanGameNameForSearch(game.Name));
+  idx:=-1;
+  if key <> '' then idx:=tbl.IndexOfName(key);
+  if (idx < 0) and (game.InternalName <> '') then
+  begin
+    key:=NormalizeForMatch(CleanGameNameForSearch(game.InternalName));
+    if key <> '' then idx:=tbl.IndexOfName(key);
+  end;
+  if idx < 0 then Exit;
+
+  val:=tbl.ValueFromIndex[idx];
+  parts:=val.Split(['|']);
+  if Length(parts) > 0 then game.Genre:=parts[0];
+  if Length(parts) > 1 then game.ReleaseYear:=parts[1];
+  if Length(parts) > 2 then game.Developer:=parts[2];
 end;
 
 procedure TGDEmu.ClearLocalGamesDirectories;

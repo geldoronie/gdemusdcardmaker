@@ -257,6 +257,15 @@ begin
   if GDEmu.LocalGamesListCount > 0 then
   begin
     LocalGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Extension);
+    with GDEmu.LocalGamesList[LocalGamesList.ItemIndex] do
+    begin
+      if Genre <> '' then
+        LocalGameDiscTypeLabel.Caption:=LocalGameDiscTypeLabel.Caption + '   ·   Gênero: ' + Genre;
+      if ReleaseYear <> '' then
+        LocalGameDiscTypeLabel.Caption:=LocalGameDiscTypeLabel.Caption + '   ·   Ano: ' + ReleaseYear;
+      if Developer <> '' then
+        LocalGameDiscTypeLabel.Caption:=LocalGameDiscTypeLabel.Caption + '   ·   Dev: ' + Developer;
+    end;
     LocalGameNameLabel.Caption:='Name: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Name;
     LocalGamePathLabel.Caption:='Path: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Path;
     LocalGameMD5Label.Caption:='MD5: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Id;
