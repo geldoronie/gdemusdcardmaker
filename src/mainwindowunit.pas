@@ -157,6 +157,9 @@ end;
 procedure TMainWindow.CopySelectedBitBtnClick(Sender: TObject);
 var i: integer;
     count: integer = 0;
+    dupCount: integer = 0;
+    resp: integer;
+    proceed: Boolean;
     HasSelected: Boolean;
 begin
   HasSelected:=False;
@@ -171,7 +174,34 @@ begin
 
   if (HasSelected) and (GDEmu.SDCardLoaded) then
   begin
-    if Application.MessageBox('Do you want to proceed copying the selected games?','Confirmation', MB_YESNO) = mrYes then
+    // Quantos dos selecionados já estão no SD Card (marca "✓").
+    for i:=0 to LocalGamesList.Count -1 do
+      if LocalGamesList.Checked[i] and (i < GDEmu.LocalGamesListCount) and
+         GDEmu.LocalGamesList[i].OnSDCard then
+        dupCount:=dupCount + 1;
+
+    proceed:=True;
+    GDEmu.DuplicateCopyPolicy:=dpCopyAsNew;
+    if dupCount > 0 then
+    begin
+      resp:=Application.MessageBox(
+        PChar(Format(
+          '%d dos jogos selecionados já estão no SD Card.' + LineEnding + LineEnding +
+          'Sim = Substituir no slot existente' + LineEnding +
+          'Não = Ignorar (copiar só os que ainda não estão)' + LineEnding +
+          'Cancelar = não copiar nada', [dupCount])),
+        'Jogos duplicados', MB_YESNOCANCEL);
+      if resp = IDYES then
+        GDEmu.DuplicateCopyPolicy:=dpReplace
+      else if resp = IDNO then
+        GDEmu.DuplicateCopyPolicy:=dpSkip
+      else
+        proceed:=False;
+    end
+    else
+      proceed:=Application.MessageBox('Do you want to proceed copying the selected games?','Confirmation', MB_YESNO) = IDYES;
+
+    if proceed then
     begin
       GDEmu.ClearSelectedLocalGamesToCopy;
       ProgressWindow.SetTitle('Copying to SD Card');
@@ -187,8 +217,8 @@ begin
       GDEmu.StartCopySelectedLocalGamesToSDCard(@OnFinishGamesCopy);
       ProgressWindow.SetMax(count);
       ProgressWindow.ShowProgress;
+      GDEmu.UpdateSDCardGameList;
     end;
-    GDEmu.UpdateSDCardGameList;
   end;
 end;
 

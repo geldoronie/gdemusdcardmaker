@@ -11,6 +11,9 @@ uses
 
 type
 
+    // O que fazer, na cópia, com um jogo selecionado que já está no SD Card.
+    TDuplicatePolicy = (dpCopyAsNew, dpSkip, dpReplace);
+
     { Forward declarations }
     TGDEmu = class;
 
@@ -66,6 +69,7 @@ type
       SDCardGamesListCount: integer;
       SDCardGamesListIndexCount: integer;
       TestMode: Boolean;
+      DuplicateCopyPolicy: TDuplicatePolicy; // política para selecionados já no SD
       SDCardLoaded: Boolean;
       CurrentAction: String;
       CurrentActionStatus: String;
@@ -592,6 +596,8 @@ end;
 
 procedure TGDEmu.CopySelectedLocalGamesToSDCard;
 var i: integer;
+    game: TGDEmuGame;
+    isDuplicate: Boolean;
     Source: string;
     Target: string;
     ISOFileNewName: string;
@@ -600,17 +606,42 @@ var i: integer;
 begin
   for i:=0 to SelectedLocalGamesListCount -1 do
   begin
-    CurrentCopyToSDCardActionGameName:=LocalGamesList[SelectedLocalGamesList[i]].Name;
+    game:=LocalGamesList[SelectedLocalGamesList[i]];
+    CurrentCopyToSDCardActionGameName:=game.Name;
+    isDuplicate:=game.OnSDCard and (game.SDCardIndex > 0);
+
+    // Já existe no SD e o usuário pediu para ignorar duplicados: pular.
+    if isDuplicate and (DuplicateCopyPolicy = dpSkip) then
+    begin
+      AddCommandLog('Cópia: ignorado (já no SD)', game.Name);
+      CurrentCopyToSDCardActionPosition:=CurrentCopyToSDCardActionPosition + 1;
+      Continue;
+    end;
+
     GameDirectoryContent:=TStringList.Create;
     NameTXT:=TStringList.Create;
-    // Getting Files/Directories
-    Source:=LocalGamesList[SelectedLocalGamesList[i]].Path;
-    Target:=ConcatPaths([SDCardGamesDirectory,Format('%.2d',[SDCardGamesListIndexCount + 1])]);
+    Source:=game.Path;
+
+    if isDuplicate and (DuplicateCopyPolicy = dpReplace) then
+    begin
+      // Substituir: reusa a pasta existente no SD, limpando-a antes.
+      Target:=ConcatPaths([SDCardGamesDirectory, Format('%.2d',[game.SDCardIndex])]);
+      AddCommandLog('Cópia: substituindo no SD', Format('%s -> slot %.2d', [game.Name, game.SDCardIndex]));
+      if TestMode = False then
+        FileUtil.DeleteDirectory(Target, False);
+    end
+    else
+    begin
+      // Cópia nova: próximo slot livre.
+      Target:=ConcatPaths([SDCardGamesDirectory, Format('%.2d',[SDCardGamesListIndexCount + 1])]);
+      SDCardGamesListIndexCount:=SDCardGamesListIndexCount + 1;
+      AddCommandLog('Cópia: novo jogo', Format('%s -> %s', [game.Name, ExtractFileName(Target)]));
+    end;
+
     // Copying Files
-    if TestMode = False  then
+    if TestMode = False then
       FileUtil.CopyDirTree(Source,Target,[TCopyFileFlag.cffCreateDestDirectory, TCopyFileFlag.cffOverwriteFile]);
-    SDCardGamesListIndexCount:=SDCardGamesListIndexCount + 1;
-    if TestMode = False  then
+    if TestMode = False then
       FileUtil.FindAllFiles(GameDirectoryContent,Target,'*.gdi;*.cdi', False, faAnyFile);
     if GameDirectoryContent.Count > 0 then
     begin
@@ -619,7 +650,7 @@ begin
         RenameFile(GameDirectoryContent[0],ISOFileNewName);
     end;
     // Creating name.txt
-    NameTXT.Add(LocalGamesList[SelectedLocalGamesList[i]].Name);
+    NameTXT.Add(game.Name);
     if TestMode = False then
       NameTXT.SaveToFile(ConcatPaths([ Target,'name.txt']));
     GameDirectoryContent.Destroy;
