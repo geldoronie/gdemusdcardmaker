@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, Dialogs, md5, RegExpr, process, fphttpclient,
   openssl, opensslsockets, DOM_HTML, DOM, SAX_HTML, Graphics, Dos, fpjson,
-  jsonparser, jsonConf, URIParser, gamemodel, externaltools;
+  jsonparser, jsonConf, URIParser, {$IFDEF UNIX}BaseUnix, Unix,{$ENDIF} gamemodel, externaltools;
 
 type
 
@@ -92,6 +92,7 @@ type
       procedure ScanSDCardGamesDirectory;
       procedure StartScanSDCardGamesDirectories(onSDCardGamesScanFinished: PStartScanSDCardGamesDirectories);
       procedure MarkLocalGamesPresentOnSDCard;
+      function GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
       procedure UpdateSDCardGameList;
       procedure ClearLocalGamesDirectories;
       procedure ClearSDCardGamesDirectories;
@@ -357,6 +358,27 @@ begin
     end;
   end;
 end;
+
+// Espaço total e livre (bytes) do sistema de arquivos onde aPath reside.
+// Linux: statfs. Windows fica para a fase de portabilidade.
+function TGDEmu.GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
+{$IFDEF UNIX}
+var info: TStatFS;
+begin
+  totalBytes:=0; freeBytes:=0; Result:=False;
+  if fpStatFS(PChar(aPath), @info) = 0 then
+  begin
+    totalBytes:=Int64(info.bsize) * Int64(info.blocks);
+    freeBytes:=Int64(info.bsize) * Int64(info.bavail);
+    Result:=True;
+  end;
+end;
+{$ELSE}
+begin
+  totalBytes:=0; freeBytes:=0; Result:=False;
+  // TODO Windows: GetDiskFreeSpaceEx (fase de portabilidade).
+end;
+{$ENDIF}
 
 procedure TGDEmu.ClearLocalGamesDirectories;
 var i: longint;

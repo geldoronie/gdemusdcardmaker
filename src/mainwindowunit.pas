@@ -86,8 +86,10 @@ type
 
 var
   MainWindow: TMainWindow;
+  DiskUsageLabel: TLabel = nil; // rótulo de espaço criado em runtime sob a barra
 
 procedure OnFinishGamesCopy;
+procedure UpdateDiskUsageBar;
 procedure OnFinishSDCardGamesScan;
 procedure OnFinishLocalGamesScan;
 procedure UpdateSDCardGameListWithProgress;
@@ -373,7 +375,48 @@ begin
   // O SD mudou após a cópia: re-marcar a biblioteca local.
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
+  UpdateDiskUsageBar;
   MainWindow.Enabled:=True;
+end;
+
+// Formata bytes em GB/MB legível.
+function HumanSize(bytes: Int64): String;
+const GB = Int64(1024) * 1024 * 1024; MB = Int64(1024) * 1024;
+begin
+  if bytes >= GB then
+    Result:=FormatFloat('0.0', bytes / GB) + ' GB'
+  else
+    Result:=FormatFloat('0', bytes / MB) + ' MB';
+end;
+
+// Atualiza a barra de uso de disco do cartão (usado/total) + rótulo de texto.
+procedure UpdateDiskUsageBar;
+var total, free, used: Int64;
+    pct: integer;
+    txt: String;
+begin
+  if GDEmu.SDCardGamesDirectory = '' then Exit;
+  if not GDEmu.GetDiskSpace(GDEmu.SDCardGamesDirectory, total, free) then Exit;
+  if total <= 0 then Exit;
+  used:=total - free;
+  pct:=Round(used * 100 / total);
+  MainWindow.DiskUseProgressBar.Min:=0;
+  MainWindow.DiskUseProgressBar.Max:=100;
+  MainWindow.DiskUseProgressBar.Position:=pct;
+  txt:=Format('Cartão: %s de %s usados (%d%%)  ·  %s livres',
+    [HumanSize(used), HumanSize(total), pct, HumanSize(free)]);
+  MainWindow.DiskUseProgressBar.ShowHint:=True;
+  MainWindow.DiskUseProgressBar.Hint:=txt;
+  if DiskUsageLabel = nil then
+  begin
+    DiskUsageLabel:=TLabel.Create(MainWindow);
+    DiskUsageLabel.Parent:=MainWindow.DiskUseProgressBar.Parent;
+    DiskUsageLabel.Top:=MainWindow.DiskUseProgressBar.Top + MainWindow.DiskUseProgressBar.Height + 1;
+    DiskUsageLabel.Align:=alTop;
+    DiskUsageLabel.Alignment:=taCenter;
+    DiskUsageLabel.BorderSpacing.Around:=2;
+  end;
+  DiskUsageLabel.Caption:=txt;
 end;
 
 // Repopula a lista da biblioteca (esquerda) marcando com "✓ " os jogos que já
@@ -404,6 +447,7 @@ begin
   // Carregar o SD pode marcar jogos da biblioteca já carregada como duplicados.
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
+  UpdateDiskUsageBar;
   MainWindow.Enabled:=True;
 end;
 
