@@ -451,9 +451,12 @@ begin
   begin
     LibraryView:=TGameLibraryView.Create(MainWindow);
     LibraryView.Parent:=MainWindow.LocalGamesList.Parent;
+    // Tira o list antigo do alinhamento ANTES (dois alClient no mesmo painel
+    // conflitam no LCL e o novo ficaria com tamanho zero / invisível).
+    MainWindow.LocalGamesList.Align:=alNone;
+    MainWindow.LocalGamesList.Visible:=False;
     LibraryView.Align:=alClient;
     LibraryView.OnSelectionChange:=@MainWindow.LocalGamesListSelectionChange;
-    MainWindow.LocalGamesList.Visible:=False;
   end;
   LibraryView.ClearGames;
   for i:=0 to GDEmu.LocalGamesListCount -1 do
