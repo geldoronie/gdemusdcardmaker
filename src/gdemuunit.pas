@@ -30,6 +30,7 @@ type
     PStartCopySelectedLocalGamesToSDCard = procedure;
     PStartScanLocalGamesDirectories = procedure;
     PStartScanSDCardGamesDirectories = procedure;
+    PStartDownloadCovers = procedure;
     TGDEmu = class(TThread)
     protected
       procedure Execute; override;
@@ -41,6 +42,7 @@ type
       _onFinishGamesCopy: PStartCopySelectedLocalGamesToSDCard;
       _onFinishLocalGamesScan: PStartScanLocalGamesDirectories;
       _onFinishSDCardGamesScan: PStartScanSDCardGamesDirectories;
+      _onFinishCoversDownload: PStartDownloadCovers;
       CommandLog: TStringList;
       procedure UpdateSDCardGameInfo(index: integer);
       procedure AddCommandLog(const command: String; const output: String);
@@ -83,6 +85,9 @@ type
       CurrentLocalGamesScanActionGameName: String;
       CurrentSDCardGamesScanActionPosition: integer;
       CurrentSDCardGamesScanActionCount: integer;
+      CurrentCoverDownloadActionPosition: integer;
+      CurrentCoverDownloadActionCount: integer;
+      CurrentCoverDownloadActionGameName: String;
       CurrentSDCardGamesScanActionGameName: String;
       constructor Create(CreateSuspended : boolean);
       procedure SetApplicationPath(value: String);
@@ -92,6 +97,9 @@ type
       procedure StartScanLocalGamesDirectories(onLocalGamesScanFinished: PStartScanLocalGamesDirectories);
       procedure ScanSDCardGamesDirectory;
       procedure StartScanSDCardGamesDirectories(onSDCardGamesScanFinished: PStartScanSDCardGamesDirectories);
+      procedure DownloadAllLocalCovers;
+      procedure StartDownloadAllLocalCovers(onFinish: PStartDownloadCovers);
+      procedure OnFinishCoversDownload;
       procedure MarkLocalGamesPresentOnSDCard;
       function GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
       procedure SaveLibrary;
@@ -195,6 +203,23 @@ begin
         CurrentActionStatus:='FINISHED';
         Synchronize(@OnFinishSDCardGamesScan);
       end;
+
+      if (CurrentAction = 'DOWNLOADINGCOVERS') and (CurrentActionStatus = 'PENDING') then
+      begin
+        CurrentActionStatus:='DOWNLOADING';
+        LastError:='';
+        try
+          DownloadAllLocalCovers;
+        except
+          on E: Exception do
+          begin
+            LastError:=E.Message;
+            AddCommandLog('ERROR: DownloadAllLocalCovers', E.Message);
+          end;
+        end;
+        CurrentActionStatus:='FINISHED';
+        Synchronize(@OnFinishCoversDownload);
+      end;
     except
       on E: Exception do
         AddCommandLog('ERROR: worker loop', E.Message);
@@ -219,6 +244,41 @@ procedure TGDEmu.OnFinishSDCardGamesScan;
 begin
   if _onFinishSDCardGamesScan <> nil then
     _onFinishSDCardGamesScan;
+end;
+
+procedure TGDEmu.OnFinishCoversDownload;
+begin
+  if _onFinishCoversDownload <> nil then
+    _onFinishCoversDownload;
+end;
+
+// Baixa (em lote) a capa de todos os jogos da biblioteca. GetGameCover já pula os
+// que têm capa válida em cache, então é seguro/idempotente — re-rodar só busca os
+// que faltam. Roda na worker thread; o progresso é lido pelo ProgressWindow.
+procedure TGDEmu.DownloadAllLocalCovers;
+var i: integer;
+begin
+  for i:=0 to LocalGamesListCount -1 do
+  begin
+    CurrentCoverDownloadActionGameName:=LocalGamesList[i].Name;
+    try
+      GetGameCover(LocalGamesList[i]);
+    except
+      on E: Exception do
+        AddCommandLog('Cover em lote: erro', Format('%s: %s',
+          [LocalGamesList[i].Name, E.Message]));
+    end;
+    CurrentCoverDownloadActionPosition:=i + 1;
+  end;
+end;
+
+procedure TGDEmu.StartDownloadAllLocalCovers(onFinish: PStartDownloadCovers);
+begin
+  CurrentAction:='DOWNLOADINGCOVERS';
+  CurrentActionStatus:='PENDING';
+  CurrentCoverDownloadActionPosition:=0;
+  CurrentCoverDownloadActionCount:=LocalGamesListCount;
+  _onFinishCoversDownload:=onFinish;
 end;
 
 constructor TGDEmu.Create(CreateSuspended : boolean);

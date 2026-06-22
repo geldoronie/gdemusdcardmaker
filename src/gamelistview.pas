@@ -44,6 +44,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure ClearGames;
+    procedure ClearThumbCache;
     procedure AddGame(const AName, AGenre, AYear, ADeveloper, ACoverPath: String;
       AOnSDCard: Boolean);
     function CheckedCount: Integer;
@@ -86,6 +87,16 @@ procedure TGameLibraryView.ClearGames;
 begin
   SetLength(FRows, 0);
   Items.Clear; // o cache de thumbnails sobrevive (capas não mudam)
+end;
+
+// Descarta os thumbnails cacheados (usar após baixar capas novas em lote, para
+// que as capas recém-chegadas sejam recarregadas em vez de servir o placeholder).
+procedure TGameLibraryView.ClearThumbCache;
+var i: Integer;
+begin
+  for i:=0 to FThumbCache.Count - 1 do
+    FThumbCache.Objects[i].Free;
+  FThumbCache.Clear;
 end;
 
 procedure TGameLibraryView.AddGame(const AName, AGenre, AYear, ADeveloper,

@@ -78,6 +78,7 @@ type
     procedure SDCardDownloadCoverBitBtnClick(Sender: TObject);
     function GetCachedCoverImage(game: TGDEmuGame): String;
     procedure UpdateSDCardGamesListMenuItemClick(Sender: TObject);
+    procedure DownloadAllCoversClick(Sender: TObject);
   private
 
   public
@@ -91,6 +92,7 @@ var
   SDCardView: TGameLibraryView = nil; // lista rica do SD Card (substitui o TCheckListBox)
 
 procedure OnFinishGamesCopy;
+procedure OnFinishCoversDownload;
 procedure UpdateDiskUsageBar;
 procedure OnFinishSDCardGamesScan;
 procedure OnFinishLocalGamesScan;
@@ -379,6 +381,35 @@ begin
 
 end;
 
+// Baixa as capas de toda a biblioteca em lote (worker thread + barra de progresso).
+procedure TMainWindow.DownloadAllCoversClick(Sender: TObject);
+begin
+  if GDEmu.LocalGamesListCount > 0 then
+  begin
+    if Application.MessageBox(
+        PChar(Format('Baixar capas para os %d jogos da biblioteca?' + LineEnding +
+          'Os que já têm capa em cache são pulados.', [GDEmu.LocalGamesListCount])),
+        'Download de capas', MB_YESNO) = IDYES then
+    begin
+      ProgressWindow.SetTitle('Baixando capas da biblioteca');
+      ProgressWindow.SetMax(GDEmu.LocalGamesListCount);
+      GDEmu.StartDownloadAllLocalCovers(@OnFinishCoversDownload);
+      ProgressWindow.ShowProgress;
+      Enabled:=False;
+    end;
+  end;
+end;
+
+// Fim do download em lote: recarrega as listas com as capas novas.
+procedure OnFinishCoversDownload;
+begin
+  if LibraryView <> nil then LibraryView.ClearThumbCache;
+  if SDCardView <> nil then SDCardView.ClearThumbCache;
+  RefreshLocalGamesList;
+  if GDEmu.SDCardLoaded then RefreshSDCardList;
+  MainWindow.Enabled:=True;
+end;
+
 procedure OnFinishGamesCopy;
 begin
   // UpdateSDCardGameList já foi chamado com progresso durante a cópia
@@ -489,6 +520,7 @@ end;
 // Carrega a biblioteca persistida (library.json) na inicialização, sem re-scan:
 // repopula o diálogo de diretórios e a lista da esquerda.
 procedure LoadLibraryIntoUI;
+var mi: TMenuItem;
 begin
   if GDEmu.LoadLibrary then
   begin
@@ -496,6 +528,12 @@ begin
     GDEmu.MarkLocalGamesPresentOnSDCard; // SD ainda não carregado: só limpa marcas
   end;
   RefreshLocalGamesList; // sempre cria o LibraryView (vazio se não houver biblioteca)
+
+  // Item de menu (runtime) para o download de capas em lote.
+  mi:=TMenuItem.Create(MainWindow);
+  mi.Caption:='Baixar capas da biblioteca';
+  mi.OnClick:=@MainWindow.DownloadAllCoversClick;
+  MainWindow.ToolsMenuItem.Add(mi);
 end;
 
 procedure OnFinishSDCardGamesScan;

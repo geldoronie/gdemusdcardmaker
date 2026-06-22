@@ -65,6 +65,15 @@ begin
   else if (GDEMU.CurrentAction = 'SCANSDCARDGAMESDIRECTORIES') and (GDEMU.CurrentActionStatus = 'FINISHED') then
   begin
     CloseProgress;
+  end
+  else if (GDEMU.CurrentAction = 'DOWNLOADINGCOVERS') and (GDEMU.CurrentActionStatus = 'DOWNLOADING') then
+  begin
+    ProgressBar.Position:=GDEMU.CurrentCoverDownloadActionPosition;
+    TextLabel.Caption:='Baixando capa: ' + GDEMU.CurrentCoverDownloadActionGameName;
+  end
+  else if (GDEMU.CurrentAction = 'DOWNLOADINGCOVERS') and (GDEMU.CurrentActionStatus = 'FINISHED') then
+  begin
+    CloseProgress;
   end;
 end;
 
