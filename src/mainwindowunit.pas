@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, CheckLst, ExtCtrls,
   Menus, Buttons, StdCtrls, ComCtrls, localgamesdirectorieswindows, gdemuunit,
   gamemodel, progresswindowunity, LCLType, aboutwindowunit,
-  openborcreatorwindowunit, commandlogwindowunit;
+  openborcreatorwindowunit, commandlogwindowunit, gamelistview;
 
 type
 
@@ -87,6 +87,7 @@ type
 var
   MainWindow: TMainWindow;
   DiskUsageLabel: TLabel = nil; // rótulo de espaço criado em runtime sob a barra
+  LibraryView: TGameLibraryView = nil; // lista rica da biblioteca (substitui o TCheckListBox)
 
 procedure OnFinishGamesCopy;
 procedure UpdateDiskUsageBar;
@@ -175,9 +176,9 @@ var i: integer;
     HasSelected: Boolean;
 begin
   HasSelected:=False;
-  for i:=0 to LocalGamesList.Count -1 do
+  for i:=0 to LibraryView.Count -1 do
   begin
-    if LocalGamesList.Checked[i] then
+    if LibraryView.Checked[i] then
     begin
       HasSelected:=True;
       Break;
@@ -187,8 +188,8 @@ begin
   if (HasSelected) and (GDEmu.SDCardLoaded) then
   begin
     // Quantos dos selecionados já estão no SD Card (marca "✓").
-    for i:=0 to LocalGamesList.Count -1 do
-      if LocalGamesList.Checked[i] and (i < GDEmu.LocalGamesListCount) and
+    for i:=0 to LibraryView.Count -1 do
+      if LibraryView.Checked[i] and (i < GDEmu.LocalGamesListCount) and
          GDEmu.LocalGamesList[i].OnSDCard then
         dupCount:=dupCount + 1;
 
@@ -218,9 +219,9 @@ begin
       GDEmu.ClearSelectedLocalGamesToCopy;
       ProgressWindow.SetTitle('Copying to SD Card');
       MainWindow.Enabled:=False;
-      for i:=0 to LocalGamesList.Count -1 do
+      for i:=0 to LibraryView.Count -1 do
       begin
-        if LocalGamesList.Checked[i] then
+        if LibraryView.Checked[i] then
         begin
           GDEmu.SelectLocalGameToCopy(i);
           count:=count + 1;
@@ -265,8 +266,8 @@ begin
   // User parameter is part of the event signature but not used
   if GDEmu.LocalGamesListCount > 0 then
   begin
-    LocalGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Extension);
-    with GDEmu.LocalGamesList[LocalGamesList.ItemIndex] do
+    LocalGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.LocalGamesList[LibraryView.ItemIndex].Extension);
+    with GDEmu.LocalGamesList[LibraryView.ItemIndex] do
     begin
       if Genre <> '' then
         LocalGameDiscTypeLabel.Caption:=LocalGameDiscTypeLabel.Caption + '   ·   Gênero: ' + Genre;
@@ -275,12 +276,12 @@ begin
       if Developer <> '' then
         LocalGameDiscTypeLabel.Caption:=LocalGameDiscTypeLabel.Caption + '   ·   Dev: ' + Developer;
     end;
-    LocalGameNameLabel.Caption:='Name: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Name;
-    LocalGamePathLabel.Caption:='Path: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Path;
-    LocalGameMD5Label.Caption:='MD5: ' + GDEmu.LocalGamesList[LocalGamesList.ItemIndex].Id;
+    LocalGameNameLabel.Caption:='Name: ' + GDEmu.LocalGamesList[LibraryView.ItemIndex].Name;
+    LocalGamePathLabel.Caption:='Path: ' + GDEmu.LocalGamesList[LibraryView.ItemIndex].Path;
+    LocalGameMD5Label.Caption:='MD5: ' + GDEmu.LocalGamesList[LibraryView.ItemIndex].Id;
     
     // Verificar se há capa em cache, senão mostrar padrão
-    coverImageFilename:=GetCachedCoverImage(GDEmu.LocalGamesList[LocalGamesList.ItemIndex]);
+    coverImageFilename:=GetCachedCoverImage(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
     try
       LocalGameCoverImage.Picture.LoadFromFile(coverImageFilename);
     except
@@ -442,17 +443,26 @@ end;
 // estão no SD Card (cruzamento por MD5 do IP.BIN feito em MarkLocalGamesPresentOnSDCard).
 procedure RefreshLocalGamesList;
 var i: integer;
-    caption: String;
+    g: TGDEmuGame;
 begin
-  MainWindow.LocalGamesList.Clear;
+  // Cria o componente rico na primeira chamada, no lugar do TCheckListBox antigo
+  // (que continua no .lfm, apenas escondido e sem uso).
+  if LibraryView = nil then
+  begin
+    LibraryView:=TGameLibraryView.Create(MainWindow);
+    LibraryView.Parent:=MainWindow.LocalGamesList.Parent;
+    LibraryView.Align:=alClient;
+    LibraryView.OnSelectionChange:=@MainWindow.LocalGamesListSelectionChange;
+    MainWindow.LocalGamesList.Visible:=False;
+  end;
+  LibraryView.ClearGames;
   for i:=0 to GDEmu.LocalGamesListCount -1 do
   begin
-    if GDEmu.LocalGamesList[i].OnSDCard then
-      caption:='✓ ' + GDEmu.LocalGamesList[i].Name
-    else
-      caption:=GDEmu.LocalGamesList[i].Name;
-    MainWindow.LocalGamesList.AddItem(caption, nil);
+    g:=GDEmu.LocalGamesList[i];
+    LibraryView.AddGame(g.Name, g.Genre, g.ReleaseYear, g.Developer,
+      MainWindow.GetCachedCoverImage(g), g.OnSDCard);
   end;
+  LibraryView.Invalidate;
 end;
 
 // Carrega a biblioteca persistida (library.json) na inicialização, sem re-scan:
@@ -463,8 +473,8 @@ begin
   begin
     LocalGamesDirectoriesDialog.DirectoriesListBox.Items.Assign(GDEmu.LocalGamesDirectoriesList);
     GDEmu.MarkLocalGamesPresentOnSDCard; // SD ainda não carregado: só limpa marcas
-    RefreshLocalGamesList;
   end;
+  RefreshLocalGamesList; // sempre cria o LibraryView (vazio se não houver biblioteca)
 end;
 
 procedure OnFinishSDCardGamesScan;
@@ -541,7 +551,7 @@ begin
     LocalGameDownloadCoverBitBtn.Enabled:=False;
     try
       Application.ProcessMessages;
-      coverImageFilename:=GDEmu.GetGameCover(GDEmu.LocalGamesList[LocalGamesList.ItemIndex]);
+      coverImageFilename:=GDEmu.GetGameCover(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
       if coverImageFilename <> '' then
       begin
         try
