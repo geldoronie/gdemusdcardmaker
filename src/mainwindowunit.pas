@@ -129,6 +129,15 @@ begin
   if GDEmu.SDCardGamesListCount > 0 then
   begin
     SDCardGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.SDCardGamesList[SDCardList.ItemIndex].Extension);
+    with GDEmu.SDCardGamesList[SDCardList.ItemIndex] do
+    begin
+      if Genre <> '' then
+        SDCardGameDiscTypeLabel.Caption:=SDCardGameDiscTypeLabel.Caption + '   ·   Gênero: ' + Genre;
+      if ReleaseYear <> '' then
+        SDCardGameDiscTypeLabel.Caption:=SDCardGameDiscTypeLabel.Caption + '   ·   Ano: ' + ReleaseYear;
+      if Developer <> '' then
+        SDCardGameDiscTypeLabel.Caption:=SDCardGameDiscTypeLabel.Caption + '   ·   Dev: ' + Developer;
+    end;
     SDCardGameNameLabel.Caption:='Name: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Name;
     SDCardGamePathLabel.Caption:='Path: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Path;
     SDCardGameIndexLabel.Caption:='Index: ' + Format('[%.2d]',[GDEmu.SDCardGamesList[SDCardList.ItemIndex].Index]);

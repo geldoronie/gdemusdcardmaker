@@ -668,6 +668,7 @@ begin
 
        GetMetaFileInfo(SDCardGamesList[SDCardGamesListCount]);
        CreateInfoCacheFile(SDCardGamesList[SDCardGamesListCount]);
+       EnrichGameFromCatalog(SDCardGamesList[SDCardGamesListCount]);
 
        SDCardGamesListCount:=SDCardGamesListCount + 1;
        if SDCardGamesListIndexCount < SDCardGamesList[SDCardGamesListCount -1].Index then
