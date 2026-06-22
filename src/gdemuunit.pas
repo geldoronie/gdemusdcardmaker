@@ -53,6 +53,7 @@ type
       GDEmuIni: TStringList;
       GDEmuListIni: TStringList;
       GameDatabaseSearch: TGameDatabaseSearch;
+      LibretroBoxartIndex: TStringList; // cache em memória do índice de capas DC
       LocalGamesDirectoriesList: TStringList;
       SDCardGamesDirectory: String;
       LocalGamesList: Array of TGDEmuGame;
@@ -106,6 +107,9 @@ type
       procedure ClearCommandLog;
     private
       function TryGetCoverFromGamesDatabase(game: TGDEmuGame; searchTerms: TStringList): String;
+      function GetLibretroBoxartIndex: TStringList;
+      function TryGetCoverFromLibretro(game: TGDEmuGame; searchTerms: TStringList): String;
+      function NormalizeForMatch(const s: String): String;
       function DownloadAndValidateImage(imageUrl: String; cacheFilename: String): Boolean;
       function EncodeURLComponent(const s: String): String;
       function CleanGameNameForSearch(const gameName: String): String;
@@ -222,6 +226,7 @@ begin
   CDI4DC:=TCDI4DC.Create;
   CDIRIP:=TCDIRIP.Create;
   HTTPClient:=TFPHttpClient.Create(nil);
+  LibretroBoxartIndex:=nil;
   InitSSLInterface;
 end;
 
@@ -672,22 +677,27 @@ var
     cleanInternalName: String;
     gameWithMetadata: TGDEmuGame;
     cleanedName: String;
+    cachedCoverFile: String;
 begin
   coverCacheImageFilename:='';
   coverFileTest:=TPicture.Create;
   imageFound:=False;
   coverFileCheck:=nil;
 
-  // Verificar se já existe no cache e é válido
-  if FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
+  // Verificar se já existe no cache e é válido (.png do libretro tem prioridade
+  // sobre o .jpg legado do gamesdatabase).
+  cachedCoverFile:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.png']);
+  if not FileExists(cachedCoverFile) then
+    cachedCoverFile:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+  if FileExists(cachedCoverFile) then
   begin
     try
-      coverFileCheck:=TFileStream.Create(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']), fmOpenRead or fmShareDenyWrite);
+      coverFileCheck:=TFileStream.Create(cachedCoverFile, fmOpenRead or fmShareDenyWrite);
       try
         imageSize:=coverFileCheck.Size;
         if imageSize = 0 then
         begin
-          DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
+          DeleteFile(cachedCoverFile);
         end
         else
         begin
@@ -696,12 +706,12 @@ begin
           coverFileTest.LoadFromStream(coverFileCheck);
           if (coverFileTest.Width > 0) and (coverFileTest.Height > 0) then
           begin
-            coverCacheImageFilename:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']);
+            coverCacheImageFilename:=cachedCoverFile;
             imageFound:=True;
           end
           else
           begin
-            DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
+            DeleteFile(cachedCoverFile);
           end;
         end;
       finally
@@ -713,8 +723,8 @@ begin
       end;
     except
       // Se houver erro ao ler, deletar e tentar baixar novamente
-      if FileExists(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg'])) then
-        DeleteFile(ConcatPaths([ApplicationPath,'cache',game.SlugName + '.jpg']));
+      if FileExists(cachedCoverFile) then
+        DeleteFile(cachedCoverFile);
     end;
   end;
 
@@ -816,13 +826,16 @@ begin
 
         AddCommandLog('Total search terms', Format('%d variations', [searchVariations.Count]));
 
-        // Usar apenas GamesDatabase.org como fonte
-        AddCommandLog('Trying source', 'GamesDatabase.org');
-        coverCacheImageFilename:=TryGetCoverFromGamesDatabase(gameWithMetadata, searchVariations);
+        // Fonte única: libretro-thumbnails (índice Redump, confiável). O antigo
+        // scraping do GamesDatabase.org foi removido do fluxo — falhava quase
+        // sempre e cada tentativa custava 5-30s de HTTP. Jogos sem capa no
+        // libretro (ex.: homebrews) caem na imagem padrão, instantaneamente.
+        AddCommandLog('Trying source', 'libretro-thumbnails');
+        coverCacheImageFilename:=TryGetCoverFromLibretro(gameWithMetadata, searchVariations);
         if coverCacheImageFilename <> '' then
         begin
           imageFound:=True;
-          AddCommandLog('Cover found', 'GamesDatabase.org');
+          AddCommandLog('Cover found', 'libretro-thumbnails');
         end;
       
       if not imageFound then
@@ -1147,6 +1160,180 @@ begin
       htmlContent.Free;
       htmlContent:=nil;
     end;
+  end;
+end;
+
+// Reduz um título a uma forma canônica comparável: minúsculas, só alfanuméricos
+// (descarta espaços, hífens, pontuação, "the"/"a" não — mantemos simples). Assim
+// "18 Wheeler - American Pro Trucker" e "18 WHEELER AMERICAN PRO TRUCKER" batem.
+function TGDEmu.NormalizeForMatch(const s: String): String;
+var i: integer; c: Char;
+begin
+  Result:='';
+  for i:=1 to Length(s) do
+  begin
+    c:=s[i];
+    if (c >= 'A') and (c <= 'Z') then
+      c:=Chr(Ord(c) + 32); // lowercase ASCII
+    if ((c >= 'a') and (c <= 'z')) or ((c >= '0') and (c <= '9')) then
+      Result:=Result + c;
+  end;
+end;
+
+// Índice de capas de Dreamcast do libretro-thumbnails. Baixado uma vez via git
+// tree API (1 request, ~1300 nomes Redump) e cacheado em disco e memória.
+function TGDEmu.GetLibretroBoxartIndex: TStringList;
+var
+  treeJson: ansistring;
+  re: TRegExpr;
+  cachePath: String;
+begin
+  if (LibretroBoxartIndex <> nil) and (LibretroBoxartIndex.Count > 0) then
+    Exit(LibretroBoxartIndex);
+  if LibretroBoxartIndex = nil then
+    LibretroBoxartIndex:=TStringList.Create;
+
+  cachePath:=ConcatPaths([ApplicationPath,'cache','dc_boxart_index.list']);
+  if FileExists(cachePath) then
+  begin
+    try
+      LibretroBoxartIndex.LoadFromFile(cachePath);
+      AddCommandLog('Libretro index (cache)', Format('%d capas', [LibretroBoxartIndex.Count]));
+    except
+      LibretroBoxartIndex.Clear;
+    end;
+  end;
+
+  if LibretroBoxartIndex.Count = 0 then
+  begin
+    try
+      AddCommandLog('Libretro index', 'Baixando índice de capas DC...');
+      treeJson:=HTTPClient.Get('https://api.github.com/repos/libretro-thumbnails/Sega_-_Dreamcast/git/trees/master?recursive=1');
+      re:=TRegExpr.Create('Named_Boxarts/([^"\\]+?)\.png');
+      try
+        if re.Exec(treeJson) then
+          repeat
+            LibretroBoxartIndex.Add(re.Match[1]);
+          until not re.ExecNext;
+      finally
+        re.Free;
+      end;
+      AddCommandLog('Libretro index', Format('%d capas indexadas', [LibretroBoxartIndex.Count]));
+      if LibretroBoxartIndex.Count > 0 then
+        try LibretroBoxartIndex.SaveToFile(cachePath); except end;
+    except
+      on E: Exception do
+        AddCommandLog('Libretro index ERRO', Format('%s: %s', [E.ClassName, E.Message]));
+    end;
+  end;
+  Result:=LibretroBoxartIndex;
+end;
+
+// Casa o jogo contra o índice libretro pelo título-base (sem região/flags),
+// preferindo a região do jogo, e baixa o PNG para cache/<slug>.png.
+function TGDEmu.TryGetCoverFromLibretro(game: TGDEmuGame; searchTerms: TStringList): String;
+var
+  index: TStringList;
+  i, j, p, rank, bestRank: integer;
+  entry, entryBase, entryNorm, termNorm, best, url, encoded, cachePng: String;
+  regionPref: array of String;
+  ms: TMemoryStream;
+  pic: TPicture;
+  c: Char;
+begin
+  Result:='';
+  index:=GetLibretroBoxartIndex;
+  if (index = nil) or (index.Count = 0) then Exit;
+
+  // Preferência de região a partir do nome/região do IP.BIN.
+  if (Pos('(US)', game.Name) > 0) or (Pos('(USA)', game.Name) > 0) or
+     (Pos('NTSC', UpperCase(game.Name)) > 0) or (Pos('U', game.Region) > 0) then
+    regionPref:=['(USA)', '(World)', '(UK)', '(Europe)', '(Japan)']
+  else if (Pos('(EU)', game.Name) > 0) or (Pos('(Europe)', game.Name) > 0) or
+          (Pos('PAL', UpperCase(game.Name)) > 0) or (Pos('E', game.Region) > 0) then
+    regionPref:=['(Europe)', '(UK)', '(World)', '(USA)', '(Japan)']
+  else if (Pos('(JP)', game.Name) > 0) or (Pos('(Japan)', game.Name) > 0) or
+          (Pos('J', game.Region) > 0) then
+    regionPref:=['(Japan)', '(USA)', '(World)', '(Europe)']
+  else
+    regionPref:=['(USA)', '(World)', '(Europe)', '(UK)', '(Japan)'];
+
+  best:=''; bestRank:=MaxInt;
+  for j:=0 to searchTerms.Count -1 do
+  begin
+    termNorm:=NormalizeForMatch(CleanGameNameForSearch(searchTerms[j]));
+    if termNorm = '' then Continue;
+    for i:=0 to index.Count -1 do
+    begin
+      entry:=index[i];
+      // título-base = tudo antes do primeiro " (" (região/idiomas/flags Redump)
+      p:=Pos(' (', entry);
+      if p > 0 then entryBase:=Copy(entry, 1, p-1) else entryBase:=entry;
+      entryNorm:=NormalizeForMatch(entryBase);
+      if entryNorm = termNorm then
+      begin
+        rank:=Length(regionPref); // não preferida = pior
+        for p:=0 to High(regionPref) do
+          if Pos(regionPref[p], entry) > 0 then begin rank:=p; Break; end;
+        if rank < bestRank then
+        begin
+          bestRank:=rank;
+          best:=entry;
+          if rank = 0 then Break; // melhor região possível já achada
+        end;
+      end;
+    end;
+    if (best <> '') and (bestRank = 0) then Break;
+  end;
+
+  if best = '' then
+  begin
+    AddCommandLog('Libretro', 'Nenhuma capa casou pelo título');
+    Exit;
+  end;
+  AddCommandLog('Libretro match', best);
+
+  // Monta a URL (só espaço precisa virar %20; parênteses/apóstrofo são literais).
+  encoded:='';
+  for i:=1 to Length(best) do
+  begin
+    c:=best[i];
+    if c = ' ' then encoded:=encoded + '%20'
+    else if c = '#' then encoded:=encoded + '%23'
+    else if c = '?' then encoded:=encoded + '%3F'
+    else if c = '&' then encoded:=encoded + '%26'
+    else if c = '+' then encoded:=encoded + '%2B'
+    else if c = '%' then encoded:=encoded + '%25'
+    else encoded:=encoded + c;
+  end;
+  url:='https://thumbnails.libretro.com/Sega%20-%20Dreamcast/Named_Boxarts/' + encoded + '.png';
+
+  cachePng:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.png']);
+  ms:=TMemoryStream.Create;
+  pic:=TPicture.Create;
+  try
+    try
+      HTTPClient.Get(url, ms);
+      AddCommandLog('Libretro download', Format('%s (%d bytes)', [url, ms.Size]));
+      if ms.Size > 1024 then
+      begin
+        ms.Position:=0;
+        pic.LoadFromStream(ms); // detecta PNG pelo conteúdo (não pela extensão)
+        if (pic.Width > 100) and (pic.Height > 100) then
+        begin
+          ms.Position:=0;
+          ms.SaveToFile(cachePng);
+          Result:=cachePng;
+          AddCommandLog('Libretro OK', Format('Capa %dx%d salva', [pic.Width, pic.Height]));
+        end;
+      end;
+    except
+      on E: Exception do
+        AddCommandLog('Libretro download ERRO', Format('%s: %s', [E.ClassName, E.Message]));
+    end;
+  finally
+    pic.Free;
+    ms.Free;
   end;
 end;
 

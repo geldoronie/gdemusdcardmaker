@@ -372,8 +372,11 @@ var
   imageSize: Int64;
 begin
   Result:=ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']); // Default
-  cacheFilename:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + '.jpg']);
-  
+  // .png do libretro tem prioridade sobre o .jpg legado.
+  cacheFilename:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + '.png']);
+  if not FileExists(cacheFilename) then
+    cacheFilename:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + '.jpg']);
+
   // Verificar se existe no cache e é válido
   if FileExists(cacheFilename) then
   begin
