@@ -88,6 +88,7 @@ var
   MainWindow: TMainWindow;
   DiskUsageLabel: TLabel = nil; // rótulo de espaço criado em runtime sob a barra
   LibraryView: TGameLibraryView = nil; // lista rica da biblioteca (substitui o TCheckListBox)
+  SDCardView: TGameLibraryView = nil; // lista rica do SD Card (substitui o TCheckListBox)
 
 procedure OnFinishGamesCopy;
 procedure UpdateDiskUsageBar;
@@ -95,6 +96,7 @@ procedure OnFinishSDCardGamesScan;
 procedure OnFinishLocalGamesScan;
 procedure UpdateSDCardGameListWithProgress;
 procedure RefreshLocalGamesList;
+procedure RefreshSDCardList;
 procedure LoadLibraryIntoUI;
 
 implementation
@@ -129,8 +131,8 @@ begin
   // User parameter is part of the event signature but not used
   if GDEmu.SDCardGamesListCount > 0 then
   begin
-    SDCardGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.SDCardGamesList[SDCardList.ItemIndex].Extension);
-    with GDEmu.SDCardGamesList[SDCardList.ItemIndex] do
+    SDCardGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.SDCardGamesList[SDCardView.ItemIndex].Extension);
+    with GDEmu.SDCardGamesList[SDCardView.ItemIndex] do
     begin
       if Genre <> '' then
         SDCardGameDiscTypeLabel.Caption:=SDCardGameDiscTypeLabel.Caption + '   ·   Gênero: ' + Genre;
@@ -139,13 +141,13 @@ begin
       if Developer <> '' then
         SDCardGameDiscTypeLabel.Caption:=SDCardGameDiscTypeLabel.Caption + '   ·   Dev: ' + Developer;
     end;
-    SDCardGameNameLabel.Caption:='Name: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Name;
-    SDCardGamePathLabel.Caption:='Path: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Path;
-    SDCardGameIndexLabel.Caption:='Index: ' + Format('[%.2d]',[GDEmu.SDCardGamesList[SDCardList.ItemIndex].Index]);
-    SDCardGameMD5Label.Caption:='MD5: ' + GDEmu.SDCardGamesList[SDCardList.ItemIndex].Id;
+    SDCardGameNameLabel.Caption:='Name: ' + GDEmu.SDCardGamesList[SDCardView.ItemIndex].Name;
+    SDCardGamePathLabel.Caption:='Path: ' + GDEmu.SDCardGamesList[SDCardView.ItemIndex].Path;
+    SDCardGameIndexLabel.Caption:='Index: ' + Format('[%.2d]',[GDEmu.SDCardGamesList[SDCardView.ItemIndex].Index]);
+    SDCardGameMD5Label.Caption:='MD5: ' + GDEmu.SDCardGamesList[SDCardView.ItemIndex].Id;
     
     // Verificar se há capa em cache, senão mostrar padrão
-    coverImageFilename:=GetCachedCoverImage(GDEmu.SDCardGamesList[SDCardList.ItemIndex]);
+    coverImageFilename:=GetCachedCoverImage(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
     try
       SDCardCoverImage.Picture.LoadFromFile(coverImageFilename);
     except
@@ -300,9 +302,9 @@ var i: integer;
     HasSelected: Boolean;
 begin
   HasSelected:=False;
-  for i:=0 to SDCardList.Count -1 do
+  for i:=0 to SDCardView.Count -1 do
   begin
-    if SDCardList.Checked[i] then
+    if SDCardView.Checked[i] then
     begin
       HasSelected:=True;
       Break;
@@ -314,19 +316,15 @@ begin
     GDEmu.ClearSelectedSDCardGamesToRemove;
     if Application.MessageBox('Do you want to remove the selected Games?','Confirmation', MB_YESNO) = mrYes then
     begin
-      for i:=0 to SDCardList.Count -1 do
+      for i:=0 to SDCardView.Count -1 do
       begin
-        if SDCardList.Checked[i] then
+        if SDCardView.Checked[i] then
         begin
           GDEmu.SelectSDCardGameToRemove(i);
         end;
       end;
       GDEmu.RemoveFromSDCard;
-      SDCardList.Clear;
-      for i:=0 to GDEmu.SDCardGamesListCount -1 do
-      begin
-        SDCardList.AddItem(GDEmu.SDCardGamesList[i].Name,nil);
-      end;
+      RefreshSDCardList;
     end;
     UpdateSDCardGameListWithProgress;
   end;
@@ -382,16 +380,11 @@ begin
 end;
 
 procedure OnFinishGamesCopy;
-var i: integer;
 begin
   // UpdateSDCardGameList já foi chamado com progresso durante a cópia
   // Não precisa chamar novamente aqui, mas vamos manter para garantir
   GDEmu.ScanSDCardGamesDirectory;
-  MainWindow.SDCardList.Clear;
-  for i:=0 to GDEmu.SDCardGamesListCount -1 do
-  begin
-    MainWindow.SDCardList.AddItem(GDEmu.SDCardGamesList[i].Name,nil);
-  end;
+  RefreshSDCardList;
   // O SD mudou após a cópia: re-marcar a biblioteca local.
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
@@ -468,6 +461,31 @@ begin
   LibraryView.Invalidate;
 end;
 
+// Mesmo componente rico no lado do SD Card. Jogos do SD já estão lá, então não
+// recebem o badge "no SD" (passa OnSDCard=False).
+procedure RefreshSDCardList;
+var i: integer;
+    g: TGDEmuGame;
+begin
+  if SDCardView = nil then
+  begin
+    SDCardView:=TGameLibraryView.Create(MainWindow);
+    SDCardView.Parent:=MainWindow.SDCardList.Parent;
+    MainWindow.SDCardList.Align:=alNone; // evita conflito de dois alClient
+    MainWindow.SDCardList.Visible:=False;
+    SDCardView.Align:=alClient;
+    SDCardView.OnSelectionChange:=@MainWindow.SDCardListSelectionChange;
+  end;
+  SDCardView.ClearGames;
+  for i:=0 to GDEmu.SDCardGamesListCount -1 do
+  begin
+    g:=GDEmu.SDCardGamesList[i];
+    SDCardView.AddGame(g.Name, g.Genre, g.ReleaseYear, g.Developer,
+      MainWindow.GetCachedCoverImage(g), False);
+  end;
+  SDCardView.Invalidate;
+end;
+
 // Carrega a biblioteca persistida (library.json) na inicialização, sem re-scan:
 // repopula o diálogo de diretórios e a lista da esquerda.
 procedure LoadLibraryIntoUI;
@@ -481,13 +499,8 @@ begin
 end;
 
 procedure OnFinishSDCardGamesScan;
-var i: integer;
 begin
-  MainWindow.SDCardList.Clear;
-  for i:=0 to GDEmu.SDCardGamesListCount -1 do
-  begin
-    MainWindow.SDCardList.AddItem(GDEmu.SDCardGamesList[i].Name,nil);
-  end;
+  RefreshSDCardList;
   // Carregar o SD pode marcar jogos da biblioteca já carregada como duplicados.
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
@@ -578,7 +591,7 @@ begin
     SDCardDownloadCoverBitBtn.Enabled:=False;
     try
       Application.ProcessMessages;
-      coverImageFilename:=GDEmu.GetGameCover(GDEmu.SDCardGamesList[SDCardList.ItemIndex]);
+      coverImageFilename:=GDEmu.GetGameCover(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
       if coverImageFilename <> '' then
       begin
         try
