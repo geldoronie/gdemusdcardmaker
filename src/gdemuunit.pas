@@ -93,6 +93,8 @@ type
       procedure StartScanSDCardGamesDirectories(onSDCardGamesScanFinished: PStartScanSDCardGamesDirectories);
       procedure MarkLocalGamesPresentOnSDCard;
       function GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
+      procedure SaveLibrary;
+      function LoadLibrary: Boolean;
       procedure UpdateSDCardGameList;
       procedure ClearLocalGamesDirectories;
       procedure ClearSDCardGamesDirectories;
@@ -322,6 +324,8 @@ begin
      end;
    end;
    Directories.Destroy;
+   // Persiste a biblioteca recém-escaneada (diretórios + jogos).
+   SaveLibrary;
 end;
 
 // Cruza a biblioteca local com o cartão pelo MD5 do IP.BIN (game.Id): marca cada
@@ -379,6 +383,149 @@ begin
   // TODO Windows: GetDiskFreeSpaceEx (fase de portabilidade).
 end;
 {$ENDIF}
+
+// Persiste a biblioteca (diretórios + jogos escaneados com metadados e
+// enriquecimento) em ApplicationPath/library.json.
+procedure TGDEmu.SaveLibrary;
+var
+  root: TJSONObject;
+  dirsArr, gamesArr: TJSONArray;
+  gObj: TJSONObject;
+  i: integer;
+  sl: TStringList;
+begin
+  root:=TJSONObject.Create;
+  try
+    root.Add('version', 1);
+    dirsArr:=TJSONArray.Create;
+    for i:=0 to LocalGamesDirectoriesList.Count -1 do
+      dirsArr.Add(LocalGamesDirectoriesList[i]);
+    root.Add('directories', dirsArr);
+
+    gamesArr:=TJSONArray.Create;
+    for i:=0 to LocalGamesListCount -1 do
+    begin
+      gObj:=TJSONObject.Create;
+      gObj.Add('path', LocalGamesList[i].Path);
+      gObj.Add('name', LocalGamesList[i].Name);
+      gObj.Add('slug', LocalGamesList[i].SlugName);
+      gObj.Add('extension', LocalGamesList[i].Extension);
+      gObj.Add('internalName', LocalGamesList[i].InternalName);
+      gObj.Add('id', LocalGamesList[i].Id);
+      gObj.Add('catalogID', LocalGamesList[i].CatalogID);
+      gObj.Add('region', LocalGamesList[i].Region);
+      gObj.Add('date', LocalGamesList[i].Date);
+      gObj.Add('disc', LocalGamesList[i].Disc);
+      gObj.Add('version', LocalGamesList[i].Version);
+      gObj.Add('vga', LocalGamesList[i].VGA);
+      gObj.Add('discSize', LocalGamesList[i].DiscSize);
+      gObj.Add('developer', LocalGamesList[i].Developer);
+      gObj.Add('releaseYear', LocalGamesList[i].ReleaseYear);
+      gObj.Add('genre', LocalGamesList[i].Genre);
+      gamesArr.Add(gObj);
+    end;
+    root.Add('games', gamesArr);
+
+    sl:=TStringList.Create;
+    try
+      sl.Text:=root.FormatJSON;
+      sl.SaveToFile(ConcatPaths([ApplicationPath,'library.json']));
+    finally
+      sl.Free;
+    end;
+    AddCommandLog('Biblioteca salva', Format('%d diretórios, %d jogos',
+      [LocalGamesDirectoriesList.Count, LocalGamesListCount]));
+  finally
+    root.Free;
+  end;
+end;
+
+// Carrega a biblioteca persistida (diretórios + jogos) sem re-escanear. Retorna
+// False se não houver library.json válido.
+function TGDEmu.LoadLibrary: Boolean;
+var
+  data, d: TJSONData;
+  root, gObj: TJSONObject;
+  dirsArr, gamesArr: TJSONArray;
+  i: integer;
+  sl: TStringList;
+  libPath: String;
+  game: TGDEmuGame;
+begin
+  Result:=False;
+  libPath:=ConcatPaths([ApplicationPath,'library.json']);
+  if not FileExists(libPath) then Exit;
+
+  data:=nil;
+  sl:=TStringList.Create;
+  try
+    sl.LoadFromFile(libPath);
+    data:=GetJSON(sl.Text);
+  except
+    on E: Exception do
+    begin
+      AddCommandLog('Biblioteca: erro ao ler', E.Message);
+      sl.Free;
+      if data <> nil then data.Free;
+      Exit;
+    end;
+  end;
+  sl.Free;
+  if (data = nil) or (data.JSONType <> jtObject) then
+  begin
+    if data <> nil then data.Free;
+    Exit;
+  end;
+
+  try
+    root:=TJSONObject(data);
+
+    LocalGamesDirectoriesList.Clear;
+    d:=root.Find('directories');
+    if (d <> nil) and (d.JSONType = jtArray) then
+    begin
+      dirsArr:=TJSONArray(d);
+      for i:=0 to dirsArr.Count -1 do
+        LocalGamesDirectoriesList.Add(dirsArr.Items[i].AsString);
+    end;
+
+    ClearLocalGamesDirectories; // libera objetos antigos e zera a contagem
+    d:=root.Find('games');
+    if (d <> nil) and (d.JSONType = jtArray) then
+    begin
+      gamesArr:=TJSONArray(d);
+      SetLength(LocalGamesList, gamesArr.Count);
+      for i:=0 to gamesArr.Count -1 do
+      begin
+        gObj:=TJSONObject(gamesArr.Items[i]);
+        game:=TGDEmuGame.Create;
+        game.Path:=gObj.Get('path', '');
+        game.Name:=gObj.Get('name', '');
+        game.SlugName:=gObj.Get('slug', '');
+        game.Extension:=gObj.Get('extension', '');
+        game.InternalName:=gObj.Get('internalName', '');
+        game.Id:=gObj.Get('id', '');
+        game.CatalogID:=gObj.Get('catalogID', '');
+        game.Region:=gObj.Get('region', '');
+        game.Date:=gObj.Get('date', '');
+        game.Disc:=gObj.Get('disc', '');
+        game.Version:=gObj.Get('version', '');
+        game.VGA:=gObj.Get('vga', '');
+        game.DiscSize:=gObj.Get('discSize', Int64(0));
+        game.Developer:=gObj.Get('developer', '');
+        game.ReleaseYear:=gObj.Get('releaseYear', '');
+        game.Genre:=gObj.Get('genre', '');
+        LocalGamesList[i]:=game;
+      end;
+      LocalGamesListCount:=gamesArr.Count;
+    end;
+    Result:=True;
+    AddCommandLog('Biblioteca carregada', Format('%d diretórios, %d jogos',
+      [LocalGamesDirectoriesList.Count, LocalGamesListCount]));
+  finally
+    data.Free;
+  end;
+end;
 
 procedure TGDEmu.ClearLocalGamesDirectories;
 var i: longint;

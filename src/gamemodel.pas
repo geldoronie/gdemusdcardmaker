@@ -26,6 +26,10 @@ type
     Disc: String;
     DiscName: String;
     CatalogID: String;
+    // Enriquecimento de catálogo (persistido na biblioteca):
+    Developer: String;
+    ReleaseYear: String;
+    Genre: String;
     // Preenchidos ao cruzar a biblioteca local com o cartão:
     DiscSize: Int64;     // tamanho do maior arquivo do disco (desempata IP.BIN igual)
     OnSDCard: Boolean;   // este jogo local já existe no SD Card

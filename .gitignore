@@ -18,6 +18,7 @@ src/gdemugui.lps
 # Runtime-generated data (NOT the data/ assets, which are tracked)
 temp/*
 cache/*
+library.json
 
 # Packaged releases (rebuilt from source)
 [rR]eleases

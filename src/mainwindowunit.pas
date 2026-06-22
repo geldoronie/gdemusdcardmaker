@@ -94,6 +94,7 @@ procedure OnFinishSDCardGamesScan;
 procedure OnFinishLocalGamesScan;
 procedure UpdateSDCardGameListWithProgress;
 procedure RefreshLocalGamesList;
+procedure LoadLibraryIntoUI;
 
 implementation
 
@@ -433,6 +434,18 @@ begin
     else
       caption:=GDEmu.LocalGamesList[i].Name;
     MainWindow.LocalGamesList.AddItem(caption, nil);
+  end;
+end;
+
+// Carrega a biblioteca persistida (library.json) na inicialização, sem re-scan:
+// repopula o diálogo de diretórios e a lista da esquerda.
+procedure LoadLibraryIntoUI;
+begin
+  if GDEmu.LoadLibrary then
+  begin
+    LocalGamesDirectoriesDialog.DirectoriesListBox.Items.Assign(GDEmu.LocalGamesDirectoriesList);
+    GDEmu.MarkLocalGamesPresentOnSDCard; // SD ainda não carregado: só limpa marcas
+    RefreshLocalGamesList;
   end;
 end;
 

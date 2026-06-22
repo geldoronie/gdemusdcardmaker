@@ -30,6 +30,7 @@ begin
   Application.CreateForm(TAboutWindow, AboutWindow);
   Application.CreateForm(TOpenBorCreatorWindow, OpenBorCreatorWindow);
   Application.CreateForm(TCommandLogWindow, CommandLogWindow);
+  LoadLibraryIntoUI; // restaura a biblioteca persistida (diretorios + jogos)
   Application.Run;
 end.
 
