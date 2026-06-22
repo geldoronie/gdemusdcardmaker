@@ -26,7 +26,16 @@ type
     Disc: String;
     DiscName: String;
     CatalogID: String;
+    // Preenchidos ao cruzar a biblioteca local com o cartão:
+    DiscSize: Int64;     // tamanho do maior arquivo do disco (desempata IP.BIN igual)
+    OnSDCard: Boolean;   // este jogo local já existe no SD Card
+    SDCardIndex: integer; // pasta (slot) onde ele está no SD, quando OnSDCard
   end;
+
+// Tamanho (bytes) do maior arquivo de dados do disco numa pasta de jogo. Estável
+// entre cópias (os tracks são copiados byte-a-byte) e distingue homebrews que
+// compartilham o mesmo IP.BIN (ex.: vários OpenBOR).
+function LargestDiscFileSize(const GamePath: String): Int64;
 
 // Display name for a game folder: contents of name.txt if present, else the
 // folder name.
@@ -65,6 +74,29 @@ var legalName: String;
 begin
   legalName:=ReplaceRegExpr('[^.a-zA-Z0-9-\ ]+', name, '', False);
   Result:=Trim(legalName);
+end;
+
+function LargestDiscFileSize(const GamePath: String): Int64;
+var sr: TSearchRec; ext: String;
+begin
+  Result:=0;
+  if SysUtils.FindFirst(ConcatPaths([GamePath, AllFilesMask]), faAnyFile, sr) = 0 then
+  begin
+    try
+      repeat
+        if (sr.Attr and faDirectory) = 0 then
+        begin
+          ext:=LowerCase(ExtractFileExt(sr.Name));
+          if (ext = '.bin') or (ext = '.raw') or (ext = '.cdi') or
+             (ext = '.iso') or (ext = '.img') then
+            if sr.Size > Result then
+              Result:=sr.Size;
+        end;
+      until SysUtils.FindNext(sr) <> 0;
+    finally
+      SysUtils.FindClose(sr);
+    end;
+  end;
 end;
 
 end.

@@ -91,6 +91,7 @@ procedure OnFinishGamesCopy;
 procedure OnFinishSDCardGamesScan;
 procedure OnFinishLocalGamesScan;
 procedure UpdateSDCardGameListWithProgress;
+procedure RefreshLocalGamesList;
 
 implementation
 
@@ -339,7 +340,27 @@ begin
   begin
     MainWindow.SDCardList.AddItem(GDEmu.SDCardGamesList[i].Name,nil);
   end;
+  // O SD mudou após a cópia: re-marcar a biblioteca local.
+  GDEmu.MarkLocalGamesPresentOnSDCard;
+  RefreshLocalGamesList;
   MainWindow.Enabled:=True;
+end;
+
+// Repopula a lista da biblioteca (esquerda) marcando com "✓ " os jogos que já
+// estão no SD Card (cruzamento por MD5 do IP.BIN feito em MarkLocalGamesPresentOnSDCard).
+procedure RefreshLocalGamesList;
+var i: integer;
+    caption: String;
+begin
+  MainWindow.LocalGamesList.Clear;
+  for i:=0 to GDEmu.LocalGamesListCount -1 do
+  begin
+    if GDEmu.LocalGamesList[i].OnSDCard then
+      caption:='✓ ' + GDEmu.LocalGamesList[i].Name
+    else
+      caption:=GDEmu.LocalGamesList[i].Name;
+    MainWindow.LocalGamesList.AddItem(caption, nil);
+  end;
 end;
 
 procedure OnFinishSDCardGamesScan;
@@ -350,17 +371,16 @@ begin
   begin
     MainWindow.SDCardList.AddItem(GDEmu.SDCardGamesList[i].Name,nil);
   end;
+  // Carregar o SD pode marcar jogos da biblioteca já carregada como duplicados.
+  GDEmu.MarkLocalGamesPresentOnSDCard;
+  RefreshLocalGamesList;
   MainWindow.Enabled:=True;
 end;
 
 procedure OnFinishLocalGamesScan;
-var i: integer;
 begin
-  MainWindow.LocalGamesList.Clear;
-  for i:=0 to GDEmu.LocalGamesListCount -1 do
-  begin
-    MainWindow.LocalGamesList.AddItem(GDEmu.LocalGamesList[i].Name,nil);
-  end;
+  GDEmu.MarkLocalGamesPresentOnSDCard;
+  RefreshLocalGamesList;
   MainWindow.Enabled:=True;
 end;
 

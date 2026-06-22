@@ -87,6 +87,7 @@ type
       procedure StartScanLocalGamesDirectories(onLocalGamesScanFinished: PStartScanLocalGamesDirectories);
       procedure ScanSDCardGamesDirectory;
       procedure StartScanSDCardGamesDirectories(onSDCardGamesScanFinished: PStartScanSDCardGamesDirectories);
+      procedure MarkLocalGamesPresentOnSDCard;
       procedure UpdateSDCardGameList;
       procedure ClearLocalGamesDirectories;
       procedure ClearSDCardGamesDirectories;
@@ -316,6 +317,41 @@ begin
      end;
    end;
    Directories.Destroy;
+end;
+
+// Cruza a biblioteca local com o cartão pelo MD5 do IP.BIN (game.Id): marca cada
+// jogo local que já está presente no SD e guarda o slot (Index) onde ele mora.
+// Seguro chamar a qualquer momento; se uma das listas estiver vazia, só limpa as
+// marcas. Jogos sem Id (extração falhou) não são casados.
+procedure TGDEmu.MarkLocalGamesPresentOnSDCard;
+var i, j: integer;
+begin
+  // Garante o tamanho do maior arquivo do disco (desempata IP.BIN igual entre
+  // homebrews de mesmo template). Computado uma vez por jogo (lazy).
+  for j:=0 to SDCardGamesListCount -1 do
+    if (SDCardGamesList[j].DiscSize = 0) and (SDCardGamesList[j].Path <> '') then
+      SDCardGamesList[j].DiscSize:=LargestDiscFileSize(SDCardGamesList[j].Path);
+
+  for i:=0 to LocalGamesListCount -1 do
+  begin
+    LocalGamesList[i].OnSDCard:=False;
+    LocalGamesList[i].SDCardIndex:=0;
+    if LocalGamesList[i].Id = '' then
+      Continue;
+    if LocalGamesList[i].DiscSize = 0 then
+      LocalGamesList[i].DiscSize:=LargestDiscFileSize(LocalGamesList[i].Path);
+    for j:=0 to SDCardGamesListCount -1 do
+    begin
+      // Mesmo jogo = mesmo IP.BIN (Id) E mesmo tamanho do maior track/imagem.
+      if (SDCardGamesList[j].Id = LocalGamesList[i].Id) and
+         (SDCardGamesList[j].DiscSize = LocalGamesList[i].DiscSize) then
+      begin
+        LocalGamesList[i].OnSDCard:=True;
+        LocalGamesList[i].SDCardIndex:=SDCardGamesList[j].Index;
+        Break;
+      end;
+    end;
+  end;
 end;
 
 procedure TGDEmu.ClearLocalGamesDirectories;
