@@ -178,11 +178,13 @@ begin
   if S = '' then Exit;
   h := C.TextHeight('Ag') + 2;
   w := C.TextWidth(S) + 10;
+  C.Brush.Style := bsSolid; // garante o preenchimento independente do estado anterior
   C.Brush.Color := Bg;
   C.Pen.Color := Bg;
   C.RoundRect(X, Y, X + w, Y + h, 6, 6);
   C.Brush.Style := bsClear;
   C.Font.Color := Fg;
+  C.Font.Style := [];
   C.TextOut(X + 5, Y + 1, S);
   C.Brush.Style := bsSolid;
   Inc(X, w + 5);
@@ -253,23 +255,14 @@ begin
     C.TextOut(ARect.Right - C.TextWidth('✓ no SD') - PAD, ty, '✓ no SD');
   end;
 
-  // Chips de tag (gênero/ano) + developer
+  // Chips de tag — todos no mesmo padrão: gênero, ano, developer e cartões.
   C.Font.Style := [];
   cx := tx;
   ty := ARect.Top + 8 + C.TextHeight('Ag') + 6;
-  DrawChip(C, cx, ty, r.Genre, RGBToColor(70, 110, 200), clWhite);
-  DrawChip(C, cx, ty, r.Year, RGBToColor(120, 120, 130), clWhite);
-  if r.Developer <> '' then
-  begin
-    if sel then C.Font.Color := clHighlightText
-    else C.Font.Color := RGBToColor(90, 90, 95);
-    C.TextOut(cx, ty + 1, r.Developer);
-    Inc(cx, C.TextWidth(r.Developer) + 8);
-  end;
-
-  // Chip dos cartões onde o jogo já foi copiado (cor teal).
-  C.Font.Style := [];
-  DrawChip(C, cx, ty, r.Cards, RGBToColor(20, 140, 130), clWhite);
+  DrawChip(C, cx, ty, r.Genre, RGBToColor(70, 110, 200), clWhite);      // azul
+  DrawChip(C, cx, ty, r.Year, RGBToColor(120, 120, 130), clWhite);     // cinza
+  DrawChip(C, cx, ty, r.Developer, RGBToColor(150, 120, 175), clWhite); // roxo
+  DrawChip(C, cx, ty, r.Cards, RGBToColor(20, 140, 130), clWhite);     // teal (cartões)
 
   C.Brush.Style := bsSolid;
   C.Font.Style := [];
