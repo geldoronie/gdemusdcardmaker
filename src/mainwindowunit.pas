@@ -79,6 +79,7 @@ type
     function GetCachedCoverImage(game: TGDEmuGame): String;
     procedure UpdateSDCardGamesListMenuItemClick(Sender: TObject);
     procedure DownloadAllCoversClick(Sender: TObject);
+    procedure DownloadAllSDCoversClick(Sender: TObject);
   private
 
   public
@@ -90,6 +91,7 @@ var
   DiskUsageLabel: TLabel = nil; // rótulo de espaço criado em runtime sob a barra
   LibraryView: TGameLibraryView = nil; // lista rica da biblioteca (substitui o TCheckListBox)
   SDCardView: TGameLibraryView = nil; // lista rica do SD Card (substitui o TCheckListBox)
+  AutoDownloadCovers: Boolean = False; // preferência: baixar capas ao fim de cada scan
 
 procedure OnFinishGamesCopy;
 procedure OnFinishCoversDownload;
@@ -249,12 +251,13 @@ begin
 
 end;
 
+// Toggle "Baixar capas automaticamente" — guarda o estado na variável global
+// AutoDownloadCovers (desacoplado do widget, pois o menu é montado em runtime).
 procedure TMainWindow.DownloadCoverMenuItemClick(Sender: TObject);
 begin
-  if DownloadCoverMenuItem.Checked then
-    DownloadCoverMenuItem.Checked:=False
-  else
-    DownloadCoverMenuItem.Checked:=True;
+  AutoDownloadCovers:=not AutoDownloadCovers;
+  if Sender is TMenuItem then
+    TMenuItem(Sender).Checked:=AutoDownloadCovers;
 end;
 
 procedure TMainWindow.ExitMenuItemClick(Sender: TObject);
@@ -400,6 +403,25 @@ begin
   end;
 end;
 
+// Download de capas em lote para os jogos do SD Card (manual, sob demanda).
+procedure TMainWindow.DownloadAllSDCoversClick(Sender: TObject);
+begin
+  if GDEmu.SDCardGamesListCount > 0 then
+  begin
+    if Application.MessageBox(
+        PChar(Format('Baixar capas para os %d jogos do SD Card?' + LineEnding +
+          'Os que já têm capa em cache são pulados.', [GDEmu.SDCardGamesListCount])),
+        'Download de capas', MB_YESNO) = IDYES then
+    begin
+      ProgressWindow.SetTitle('Baixando capas do SD Card');
+      ProgressWindow.SetMax(GDEmu.SDCardGamesListCount);
+      GDEmu.StartDownloadAllSDCovers(@OnFinishCoversDownload);
+      ProgressWindow.ShowProgress;
+      Enabled:=False;
+    end;
+  end;
+end;
+
 // Fim do download em lote: recarrega as listas com as capas novas.
 procedure OnFinishCoversDownload;
 begin
@@ -519,8 +541,66 @@ end;
 
 // Carrega a biblioteca persistida (library.json) na inicialização, sem re-scan:
 // repopula o diálogo de diretórios e a lista da esquerda.
+// Cria um item de menu já parentado e com handler.
+function AddMenu(AParent: TMenuItem; const ACaption: String;
+  AHandler: TNotifyEvent): TMenuItem;
+begin
+  Result:=TMenuItem.Create(MainWindow);
+  Result.Caption:=ACaption;
+  Result.OnClick:=AHandler;
+  AParent.Add(Result);
+end;
+
+function AddSeparator(AParent: TMenuItem): TMenuItem;
+begin
+  Result:=TMenuItem.Create(MainWindow);
+  Result.Caption:='-';
+  AParent.Add(Result);
+end;
+
+// Reconstrói a barra de menus do zero, com grupos EXPLÍCITOS: o que é da
+// Biblioteca de Jogos e o que é do SD Card ficam separados e nomeados. Os menus
+// originais do .lfm (confusos e com handlers trocados) são descartados.
+procedure BuildMainMenu;
+var top, autoItem: TMenuItem;
+begin
+  MainWindow.MainWindowMenu.Items.Clear;
+
+  // Arquivo
+  top:=AddMenu(MainWindow.MainWindowMenu.Items, 'Arquivo', nil);
+  AddMenu(top, 'Sair', @MainWindow.ExitMenuItemClick);
+
+  // Biblioteca de Jogos (lado esquerdo)
+  top:=AddMenu(MainWindow.MainWindowMenu.Items, 'Biblioteca de Jogos', nil);
+  AddMenu(top, 'Adicionar diretórios de jogos…', @MainWindow.OpenLocalGamesDirectoriesDialogBitBtnClick);
+  AddMenu(top, 'Baixar capas da biblioteca', @MainWindow.DownloadAllCoversClick);
+
+  // SD Card (lado direito)
+  top:=AddMenu(MainWindow.MainWindowMenu.Items, 'SD Card', nil);
+  AddMenu(top, 'Carregar SD Card…', @MainWindow.LoadSDCardBitBtnClick);
+  AddSeparator(top);
+  AddMenu(top, 'Copiar selecionados para o SD Card', @MainWindow.CopySelectedBitBtnClick);
+  AddMenu(top, 'Remover jogo do SD Card', @MainWindow.RemoveGameFromSDCardBitBtnClick);
+  AddMenu(top, 'Atualizar lista de jogos (GDMenu)', @MainWindow.UpdateGamesListSDCardBitBtnClick);
+  AddSeparator(top);
+  AddMenu(top, 'Baixar capas do SD Card', @MainWindow.DownloadAllSDCoversClick);
+
+  // Ferramentas / Opções
+  top:=AddMenu(MainWindow.MainWindowMenu.Items, 'Ferramentas', nil);
+  AddMenu(top, 'Criar disco OpenBOR', @MainWindow.OpenBORDiscCreatorMenuItemClick);
+  AddSeparator(top);
+  autoItem:=AddMenu(top, 'Baixar capas automaticamente (ao escanear)',
+    @MainWindow.DownloadCoverMenuItemClick);
+  autoItem.ShowAlwaysCheckable:=True;
+  autoItem.Checked:=AutoDownloadCovers;
+
+  // Ajuda
+  top:=AddMenu(MainWindow.MainWindowMenu.Items, 'Ajuda', nil);
+  AddMenu(top, 'Sobre', @MainWindow.AboutMenuItemClick);
+  AddMenu(top, 'Créditos', @MainWindow.CreditsMenuItemClick);
+end;
+
 procedure LoadLibraryIntoUI;
-var mi: TMenuItem;
 begin
   if GDEmu.LoadLibrary then
   begin
@@ -528,18 +608,7 @@ begin
     GDEmu.MarkLocalGamesPresentOnSDCard; // SD ainda não carregado: só limpa marcas
   end;
   RefreshLocalGamesList; // sempre cria o LibraryView (vazio se não houver biblioteca)
-
-  // Item de menu (runtime) para o download de capas em lote (manual, sob demanda).
-  mi:=TMenuItem.Create(MainWindow);
-  mi.Caption:='Baixar capas da biblioteca';
-  mi.OnClick:=@MainWindow.DownloadAllCoversClick;
-  MainWindow.ToolsMenuItem.Add(mi);
-
-  // Reaproveita o antigo "Download Cover" (que não fazia nada) como um toggle
-  // explícito de auto-download. Padrão DESLIGADO: carregar a biblioteca/SD nunca
-  // baixa capas (evita lentidão); ligar faz baixar em 2º plano após cada scan.
-  MainWindow.DownloadCoverMenuItem.Caption:='Baixar capas automaticamente';
-  MainWindow.DownloadCoverMenuItem.Checked:=False;
+  BuildMainMenu;         // menu reorganizado: Biblioteca vs SD Card explícitos
 end;
 
 procedure OnFinishSDCardGamesScan;
@@ -551,7 +620,7 @@ begin
   UpdateDiskUsageBar;
   // Por padrão NÃO baixa capas ao carregar o SD (pode ser lento). Só se o usuário
   // ativou "Baixar capas automaticamente".
-  if MainWindow.DownloadCoverMenuItem.Checked and (GDEmu.SDCardGamesListCount > 0) then
+  if AutoDownloadCovers and (GDEmu.SDCardGamesListCount > 0) then
   begin
     ProgressWindow.SetTitle('Baixando capas do SD Card');
     ProgressWindow.SetMax(GDEmu.SDCardGamesListCount);
@@ -568,7 +637,7 @@ begin
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
   // Só baixa capas no fim do scan se o usuário ativou o toggle (padrão OFF).
-  if MainWindow.DownloadCoverMenuItem.Checked and (GDEmu.LocalGamesListCount > 0) then
+  if AutoDownloadCovers and (GDEmu.LocalGamesListCount > 0) then
   begin
     ProgressWindow.SetTitle('Baixando capas da biblioteca');
     ProgressWindow.SetMax(GDEmu.LocalGamesListCount);
