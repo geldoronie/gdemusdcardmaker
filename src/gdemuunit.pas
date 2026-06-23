@@ -88,6 +88,7 @@ type
       CurrentCoverDownloadActionPosition: integer;
       CurrentCoverDownloadActionCount: integer;
       CurrentCoverDownloadActionGameName: String;
+      CoverDownloadIsSD: Boolean; // alvo do lote: False=biblioteca, True=SD Card
       CurrentSDCardGamesScanActionGameName: String;
       constructor Create(CreateSuspended : boolean);
       procedure SetApplicationPath(value: String);
@@ -97,8 +98,9 @@ type
       procedure StartScanLocalGamesDirectories(onLocalGamesScanFinished: PStartScanLocalGamesDirectories);
       procedure ScanSDCardGamesDirectory;
       procedure StartScanSDCardGamesDirectories(onSDCardGamesScanFinished: PStartScanSDCardGamesDirectories);
-      procedure DownloadAllLocalCovers;
+      procedure DownloadAllCovers;
       procedure StartDownloadAllLocalCovers(onFinish: PStartDownloadCovers);
+      procedure StartDownloadAllSDCovers(onFinish: PStartDownloadCovers);
       procedure OnFinishCoversDownload;
       procedure MarkLocalGamesPresentOnSDCard;
       function GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
@@ -209,12 +211,12 @@ begin
         CurrentActionStatus:='DOWNLOADING';
         LastError:='';
         try
-          DownloadAllLocalCovers;
+          DownloadAllCovers;
         except
           on E: Exception do
           begin
             LastError:=E.Message;
-            AddCommandLog('ERROR: DownloadAllLocalCovers', E.Message);
+            AddCommandLog('ERROR: DownloadAllCovers', E.Message);
           end;
         end;
         CurrentActionStatus:='FINISHED';
@@ -252,21 +254,24 @@ begin
     _onFinishCoversDownload;
 end;
 
-// Baixa (em lote) a capa de todos os jogos da biblioteca. GetGameCover já pula os
-// que têm capa válida em cache, então é seguro/idempotente — re-rodar só busca os
-// que faltam. Roda na worker thread; o progresso é lido pelo ProgressWindow.
-procedure TGDEmu.DownloadAllLocalCovers;
-var i: integer;
+// Baixa (em lote) a capa de todos os jogos da biblioteca OU do SD Card (conforme
+// CoverDownloadIsSD). GetGameCover já pula os que têm capa válida em cache, então
+// é seguro/idempotente — re-rodar só busca os que faltam. Roda na worker thread;
+// o progresso é lido pelo ProgressWindow.
+procedure TGDEmu.DownloadAllCovers;
+var i, n: integer;
+    g: TGDEmuGame;
 begin
-  for i:=0 to LocalGamesListCount -1 do
+  if CoverDownloadIsSD then n:=SDCardGamesListCount else n:=LocalGamesListCount;
+  for i:=0 to n -1 do
   begin
-    CurrentCoverDownloadActionGameName:=LocalGamesList[i].Name;
+    if CoverDownloadIsSD then g:=SDCardGamesList[i] else g:=LocalGamesList[i];
+    CurrentCoverDownloadActionGameName:=g.Name;
     try
-      GetGameCover(LocalGamesList[i]);
+      GetGameCover(g);
     except
       on E: Exception do
-        AddCommandLog('Cover em lote: erro', Format('%s: %s',
-          [LocalGamesList[i].Name, E.Message]));
+        AddCommandLog('Cover em lote: erro', Format('%s: %s', [g.Name, E.Message]));
     end;
     CurrentCoverDownloadActionPosition:=i + 1;
   end;
@@ -274,10 +279,21 @@ end;
 
 procedure TGDEmu.StartDownloadAllLocalCovers(onFinish: PStartDownloadCovers);
 begin
+  CoverDownloadIsSD:=False;
   CurrentAction:='DOWNLOADINGCOVERS';
   CurrentActionStatus:='PENDING';
   CurrentCoverDownloadActionPosition:=0;
   CurrentCoverDownloadActionCount:=LocalGamesListCount;
+  _onFinishCoversDownload:=onFinish;
+end;
+
+procedure TGDEmu.StartDownloadAllSDCovers(onFinish: PStartDownloadCovers);
+begin
+  CoverDownloadIsSD:=True;
+  CurrentAction:='DOWNLOADINGCOVERS';
+  CurrentActionStatus:='PENDING';
+  CurrentCoverDownloadActionPosition:=0;
+  CurrentCoverDownloadActionCount:=SDCardGamesListCount;
   _onFinishCoversDownload:=onFinish;
 end;
 

@@ -529,11 +529,17 @@ begin
   end;
   RefreshLocalGamesList; // sempre cria o LibraryView (vazio se não houver biblioteca)
 
-  // Item de menu (runtime) para o download de capas em lote.
+  // Item de menu (runtime) para o download de capas em lote (manual, sob demanda).
   mi:=TMenuItem.Create(MainWindow);
   mi.Caption:='Baixar capas da biblioteca';
   mi.OnClick:=@MainWindow.DownloadAllCoversClick;
   MainWindow.ToolsMenuItem.Add(mi);
+
+  // Reaproveita o antigo "Download Cover" (que não fazia nada) como um toggle
+  // explícito de auto-download. Padrão DESLIGADO: carregar a biblioteca/SD nunca
+  // baixa capas (evita lentidão); ligar faz baixar em 2º plano após cada scan.
+  MainWindow.DownloadCoverMenuItem.Caption:='Baixar capas automaticamente';
+  MainWindow.DownloadCoverMenuItem.Checked:=False;
 end;
 
 procedure OnFinishSDCardGamesScan;
@@ -543,14 +549,35 @@ begin
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
   UpdateDiskUsageBar;
-  MainWindow.Enabled:=True;
+  // Por padrão NÃO baixa capas ao carregar o SD (pode ser lento). Só se o usuário
+  // ativou "Baixar capas automaticamente".
+  if MainWindow.DownloadCoverMenuItem.Checked and (GDEmu.SDCardGamesListCount > 0) then
+  begin
+    ProgressWindow.SetTitle('Baixando capas do SD Card');
+    ProgressWindow.SetMax(GDEmu.SDCardGamesListCount);
+    GDEmu.StartDownloadAllSDCovers(@OnFinishCoversDownload);
+    ProgressWindow.ShowProgress;
+    MainWindow.Enabled:=False;
+  end
+  else
+    MainWindow.Enabled:=True;
 end;
 
 procedure OnFinishLocalGamesScan;
 begin
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
-  MainWindow.Enabled:=True;
+  // Só baixa capas no fim do scan se o usuário ativou o toggle (padrão OFF).
+  if MainWindow.DownloadCoverMenuItem.Checked and (GDEmu.LocalGamesListCount > 0) then
+  begin
+    ProgressWindow.SetTitle('Baixando capas da biblioteca');
+    ProgressWindow.SetMax(GDEmu.LocalGamesListCount);
+    GDEmu.StartDownloadAllLocalCovers(@OnFinishCoversDownload);
+    ProgressWindow.ShowProgress;
+    MainWindow.Enabled:=False;
+  end
+  else
+    MainWindow.Enabled:=True;
 end;
 
 function TMainWindow.GetCachedCoverImage(game: TGDEmuGame): String;
