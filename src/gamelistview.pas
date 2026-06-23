@@ -22,6 +22,7 @@ type
     Year: String;
     Developer: String;
     CoverPath: String;
+    Cards: String;       // rótulo(s) dos cartões onde o jogo já foi copiado
     OnSDCard: Boolean;
     Checked: Boolean;
   end;
@@ -46,7 +47,7 @@ type
     procedure ClearGames;
     procedure ClearThumbCache;
     procedure AddGame(const AName, AGenre, AYear, ADeveloper, ACoverPath: String;
-      AOnSDCard: Boolean);
+      AOnSDCard: Boolean; const ACards: String = '');
     function CheckedCount: Integer;
     property Checked[Index: Integer]: Boolean read GetChecked write SetChecked;
     property ItemIndex;
@@ -100,7 +101,7 @@ begin
 end;
 
 procedure TGameLibraryView.AddGame(const AName, AGenre, AYear, ADeveloper,
-  ACoverPath: String; AOnSDCard: Boolean);
+  ACoverPath: String; AOnSDCard: Boolean; const ACards: String = '');
 var n: Integer;
 begin
   n := Length(FRows);
@@ -110,6 +111,7 @@ begin
   FRows[n].Year := AYear;
   FRows[n].Developer := ADeveloper;
   FRows[n].CoverPath := ACoverPath;
+  FRows[n].Cards := ACards;
   FRows[n].OnSDCard := AOnSDCard;
   FRows[n].Checked := False;
   Items.Add(AName); // mantém Count/seleção do TCustomListBox em sincronia
@@ -262,7 +264,12 @@ begin
     if sel then C.Font.Color := clHighlightText
     else C.Font.Color := RGBToColor(90, 90, 95);
     C.TextOut(cx, ty + 1, r.Developer);
+    Inc(cx, C.TextWidth(r.Developer) + 8);
   end;
+
+  // Chip dos cartões onde o jogo já foi copiado (cor teal).
+  C.Font.Style := [];
+  DrawChip(C, cx, ty, r.Cards, RGBToColor(20, 140, 130), clWhite);
 
   C.Brush.Style := bsSolid;
   C.Font.Style := [];

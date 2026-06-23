@@ -34,6 +34,9 @@ type
     DiscSize: Int64;     // tamanho do maior arquivo do disco (desempata IP.BIN igual)
     OnSDCard: Boolean;   // este jogo local já existe no SD Card
     SDCardIndex: integer; // pasta (slot) onde ele está no SD, quando OnSDCard
+    // Em quais cartões este jogo já foi copiado (IDs separados por '|'). Os
+    // rótulos amigáveis ficam no registro de cartões da biblioteca.
+    CopiedToCardIds: String;
   end;
 
 // Tamanho (bytes) do maior arquivo de dados do disco numa pasta de jogo. Estável

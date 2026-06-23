@@ -80,6 +80,8 @@ type
     procedure UpdateSDCardGamesListMenuItemClick(Sender: TObject);
     procedure DownloadAllCoversClick(Sender: TObject);
     procedure DownloadAllSDCoversClick(Sender: TObject);
+    procedure TagCardGamesClick(Sender: TObject);
+    procedure RenameCardClick(Sender: TObject);
   private
 
   public
@@ -403,6 +405,44 @@ begin
   end;
 end;
 
+// Marca, na biblioteca, todos os jogos presentes no cartão carregado como
+// copiados nele (backfill — funciona para cartões já cheios de antes).
+procedure TMainWindow.TagCardGamesClick(Sender: TObject);
+begin
+  if not GDEmu.SDCardLoaded then
+  begin
+    ShowMessage('Carregue um cartão SD primeiro.');
+    Exit;
+  end;
+  if GDEmu.CurrentSDCardId = '' then
+  begin
+    ShowMessage('Este cartão ainda não tem identidade. Recarregue-o para nomeá-lo.');
+    Exit;
+  end;
+  GDEmu.TagGamesOnCurrentCard;
+  RefreshLocalGamesList;
+  ShowMessage(Format('Jogos presentes em "%s" marcados na biblioteca.',
+    [GDEmu.CurrentSDCardLabel]));
+end;
+
+// Renomeia o cartão carregado (atualiza o arquivo no cartão e o registro).
+procedure TMainWindow.RenameCardClick(Sender: TObject);
+var cardName: String;
+begin
+  if not GDEmu.SDCardLoaded then
+  begin
+    ShowMessage('Carregue um cartão SD primeiro.');
+    Exit;
+  end;
+  cardName:=GDEmu.CurrentSDCardLabel;
+  if InputQuery('Renomear cartão', 'Nome do cartão:', cardName) then
+  begin
+    GDEmu.SaveSDCardIdentity(cardName);
+    GDEmu.SaveLibrary;     // persiste o registro de cartões
+    RefreshLocalGamesList; // chips com o novo nome
+  end;
+end;
+
 // Download de capas em lote para os jogos do SD Card (manual, sob demanda).
 procedure TMainWindow.DownloadAllSDCoversClick(Sender: TObject);
 begin
@@ -485,6 +525,27 @@ begin
   DiskUsageLabel.Caption:=txt;
 end;
 
+// Junta os rótulos dos cartões onde o jogo já foi copiado, para o chip do card.
+function CardsLabelFor(game: TGDEmuGame): String;
+var ids: TStringList; i: integer;
+begin
+  Result:='';
+  if game.CopiedToCardIds = '' then Exit;
+  ids:=TStringList.Create;
+  try
+    ids.Delimiter:='|';
+    ids.StrictDelimiter:=True;
+    ids.DelimitedText:=game.CopiedToCardIds;
+    for i:=0 to ids.Count -1 do
+    begin
+      if Result <> '' then Result:=Result + ', ';
+      Result:=Result + GDEmu.CardLabel(ids[i]);
+    end;
+  finally
+    ids.Free;
+  end;
+end;
+
 // Repopula a lista da biblioteca (esquerda) marcando com "✓ " os jogos que já
 // estão no SD Card (cruzamento por MD5 do IP.BIN feito em MarkLocalGamesPresentOnSDCard).
 procedure RefreshLocalGamesList;
@@ -509,7 +570,7 @@ begin
   begin
     g:=GDEmu.LocalGamesList[i];
     LibraryView.AddGame(g.Name, g.Genre, g.ReleaseYear, g.Developer,
-      MainWindow.GetCachedCoverImage(g), g.OnSDCard);
+      MainWindow.GetCachedCoverImage(g), g.OnSDCard, CardsLabelFor(g));
   end;
   LibraryView.Invalidate;
 end;
@@ -578,6 +639,9 @@ begin
   // SD Card (lado direito)
   top:=AddMenu(MainWindow.MainWindowMenu.Items, 'SD Card', nil);
   AddMenu(top, 'Carregar SD Card…', @MainWindow.LoadSDCardBitBtnClick);
+  AddMenu(top, 'Renomear este cartão…', @MainWindow.RenameCardClick);
+  AddSeparator(top);
+  AddMenu(top, 'Marcar jogos deste cartão na biblioteca', @MainWindow.TagCardGamesClick);
   AddSeparator(top);
   AddMenu(top, 'Copiar selecionados para o SD Card', @MainWindow.CopySelectedBitBtnClick);
   AddMenu(top, 'Remover jogo do SD Card', @MainWindow.RemoveGameFromSDCardBitBtnClick);
@@ -612,7 +676,17 @@ begin
 end;
 
 procedure OnFinishSDCardGamesScan;
+var cardName: String;
 begin
+  // Identidade do cartão: lê de gdemugui-card.json; se for um cartão novo (sem
+  // arquivo), pede um nome e cria a identidade (vale também p/ cartões já cheios).
+  if not GDEmu.LoadSDCardIdentity then
+  begin
+    cardName:='Cartão SD';
+    InputQuery('Cartão SD novo', 'Dê um nome a este cartão (para etiquetar os jogos):', cardName);
+    GDEmu.SaveSDCardIdentity(cardName);
+  end;
+
   RefreshSDCardList;
   // Carregar o SD pode marcar jogos da biblioteca já carregada como duplicados.
   GDEmu.MarkLocalGamesPresentOnSDCard;

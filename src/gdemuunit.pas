@@ -89,6 +89,9 @@ type
       CurrentCoverDownloadActionCount: integer;
       CurrentCoverDownloadActionGameName: String;
       CoverDownloadIsSD: Boolean; // alvo do lote: False=biblioteca, True=SD Card
+      CurrentSDCardId: String;    // ID do cartão carregado (de gdemugui-card.json)
+      CurrentSDCardLabel: String; // rótulo amigável do cartão carregado
+      SDCardRegistry: TStringList; // id=rótulo de todos os cartões conhecidos
       CurrentSDCardGamesScanActionGameName: String;
       constructor Create(CreateSuspended : boolean);
       procedure SetApplicationPath(value: String);
@@ -103,6 +106,11 @@ type
       procedure StartDownloadAllSDCovers(onFinish: PStartDownloadCovers);
       procedure OnFinishCoversDownload;
       procedure MarkLocalGamesPresentOnSDCard;
+      function LoadSDCardIdentity: Boolean;
+      procedure SaveSDCardIdentity(const aLabel: String);
+      function CardLabel(const aId: String): String;
+      procedure AddCardToGame(game: TGDEmuGame; const aCardId: String);
+      procedure TagGamesOnCurrentCard;
       function GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
       procedure SaveLibrary;
       function LoadLibrary: Boolean;
@@ -315,6 +323,8 @@ begin
   HTTPClient:=TFPHttpClient.Create(nil);
   LibretroBoxartIndex:=nil;
   CatalogTable:=nil;
+  SDCardRegistry:=TStringList.Create;
+  SDCardRegistry.NameValueSeparator:='=';
   InitSSLInterface;
 end;
 
@@ -444,6 +454,117 @@ begin
   end;
 end;
 
+// Lê a identidade do cartão carregado de <SD>/gdemugui-card.json. Define
+// CurrentSDCardId/Label e registra o rótulo. False se o arquivo não existir
+// (cartão ainda sem identidade).
+function TGDEmu.LoadSDCardIdentity: Boolean;
+var
+  data: TJSONData;
+  obj: TJSONObject;
+  sl: TStringList;
+  path: String;
+begin
+  Result:=False;
+  CurrentSDCardId:='';
+  CurrentSDCardLabel:='';
+  if SDCardGamesDirectory = '' then Exit;
+  path:=ConcatPaths([SDCardGamesDirectory,'gdemugui-card.json']);
+  if not FileExists(path) then Exit;
+  data:=nil;
+  sl:=TStringList.Create;
+  try
+    sl.LoadFromFile(path);
+    data:=GetJSON(sl.Text);
+  except
+    sl.Free;
+    if data <> nil then data.Free;
+    Exit;
+  end;
+  sl.Free;
+  if (data <> nil) and (data.JSONType = jtObject) then
+  begin
+    obj:=TJSONObject(data);
+    CurrentSDCardId:=obj.Get('id', '');
+    CurrentSDCardLabel:=obj.Get('label', '');
+    if CurrentSDCardId <> '' then
+    begin
+      SDCardRegistry.Values[CurrentSDCardId]:=CurrentSDCardLabel;
+      Result:=True;
+    end;
+  end;
+  if data <> nil then data.Free;
+end;
+
+// Grava/atualiza a identidade do cartão (gera um ID novo se ainda não houver) e
+// registra o rótulo.
+procedure TGDEmu.SaveSDCardIdentity(const aLabel: String);
+var
+  obj: TJSONObject;
+  sl: TStringList;
+  g: TGUID;
+begin
+  if SDCardGamesDirectory = '' then Exit;
+  if CurrentSDCardId = '' then
+  begin
+    CreateGUID(g);
+    CurrentSDCardId:=GUIDToString(g);
+  end;
+  CurrentSDCardLabel:=aLabel;
+  SDCardRegistry.Values[CurrentSDCardId]:=aLabel;
+  obj:=TJSONObject.Create;
+  try
+    obj.Add('id', CurrentSDCardId);
+    obj.Add('label', aLabel);
+    sl:=TStringList.Create;
+    try
+      sl.Text:=obj.FormatJSON;
+      sl.SaveToFile(ConcatPaths([SDCardGamesDirectory,'gdemugui-card.json']));
+    finally
+      sl.Free;
+    end;
+  finally
+    obj.Free;
+  end;
+end;
+
+function TGDEmu.CardLabel(const aId: String): String;
+begin
+  Result:=SDCardRegistry.Values[aId];
+  if Result = '' then Result:=aId; // fallback: mostra o id se não houver rótulo
+end;
+
+// Acrescenta um cartão à lista de "copiado em" de um jogo (sem duplicar).
+procedure TGDEmu.AddCardToGame(game: TGDEmuGame; const aCardId: String);
+var ids: TStringList;
+begin
+  if (game = nil) or (aCardId = '') then Exit;
+  ids:=TStringList.Create;
+  try
+    ids.Delimiter:='|';
+    ids.StrictDelimiter:=True;
+    ids.DelimitedText:=game.CopiedToCardIds;
+    if ids.IndexOf(aCardId) < 0 then
+    begin
+      ids.Add(aCardId);
+      game.CopiedToCardIds:=ids.DelimitedText;
+    end;
+  finally
+    ids.Free;
+  end;
+end;
+
+// Marca todos os jogos da biblioteca presentes no cartão carregado (OnSDCard)
+// como copiados nele. Faz o backfill inclusive de cartões já existentes. Persiste.
+procedure TGDEmu.TagGamesOnCurrentCard;
+var i: integer;
+begin
+  if CurrentSDCardId = '' then Exit;
+  for i:=0 to LocalGamesListCount -1 do
+    if LocalGamesList[i].OnSDCard then
+      AddCardToGame(LocalGamesList[i], CurrentSDCardId);
+  SaveLibrary;
+end;
+
 // Espaço total e livre (bytes) do sistema de arquivos onde aPath reside.
 // Linux: statfs. Windows fica para a fase de portabilidade.
 function TGDEmu.GetDiskSpace(const aPath: String; out totalBytes, freeBytes: Int64): Boolean;
@@ -470,8 +591,8 @@ end;
 procedure TGDEmu.SaveLibrary;
 var
   root: TJSONObject;
-  dirsArr, gamesArr: TJSONArray;
-  gObj: TJSONObject;
+  dirsArr, gamesArr, cardsArr: TJSONArray;
+  gObj, cObj: TJSONObject;
   i: integer;
   sl: TStringList;
 begin
@@ -503,9 +624,21 @@ begin
       gObj.Add('developer', LocalGamesList[i].Developer);
       gObj.Add('releaseYear', LocalGamesList[i].ReleaseYear);
       gObj.Add('genre', LocalGamesList[i].Genre);
+      gObj.Add('copiedToCards', LocalGamesList[i].CopiedToCardIds);
       gamesArr.Add(gObj);
     end;
     root.Add('games', gamesArr);
+
+    // Registro de cartões conhecidos (id -> rótulo).
+    cardsArr:=TJSONArray.Create;
+    for i:=0 to SDCardRegistry.Count -1 do
+    begin
+      cObj:=TJSONObject.Create;
+      cObj.Add('id', SDCardRegistry.Names[i]);
+      cObj.Add('label', SDCardRegistry.ValueFromIndex[i]);
+      cardsArr.Add(cObj);
+    end;
+    root.Add('cardRegistry', cardsArr);
 
     sl:=TStringList.Create;
     try
@@ -596,12 +729,23 @@ begin
         game.Developer:=gObj.Get('developer', '');
         game.ReleaseYear:=gObj.Get('releaseYear', '');
         game.Genre:=gObj.Get('genre', '');
+        game.CopiedToCardIds:=gObj.Get('copiedToCards', '');
         if (game.Genre = '') and (game.Developer = '') and (game.ReleaseYear = '') then
           EnrichGameFromCatalog(game); // back-fill de bibliotecas antigas
         LocalGamesList[i]:=game;
       end;
       LocalGamesListCount:=gamesArr.Count;
     end;
+
+    // Registro de cartões conhecidos (id -> rótulo).
+    SDCardRegistry.Clear;
+    d:=root.Find('cardRegistry');
+    if (d <> nil) and (d.JSONType = jtArray) then
+      for i:=0 to TJSONArray(d).Count -1 do
+        if TJSONArray(d).Items[i].JSONType = jtObject then
+          SDCardRegistry.Values[TJSONObject(TJSONArray(d).Items[i]).Get('id', '')]:=
+            TJSONObject(TJSONArray(d).Items[i]).Get('label', '');
+
     Result:=True;
     AddCommandLog('Biblioteca carregada', Format('%d diretórios, %d jogos',
       [LocalGamesDirectoriesList.Count, LocalGamesListCount]));
@@ -975,8 +1119,13 @@ begin
       NameTXT.SaveToFile(ConcatPaths([ Target,'name.txt']));
     GameDirectoryContent.Destroy;
     NameTXT.Destroy;
+    // Etiqueta automática: o jogo agora está neste cartão.
+    if (TestMode = False) and (CurrentSDCardId <> '') then
+      AddCardToGame(game, CurrentSDCardId);
     CurrentCopyToSDCardActionPosition:=CurrentCopyToSDCardActionPosition + 1;
   end;
+  if (TestMode = False) and (CurrentSDCardId <> '') then
+    SaveLibrary; // persiste as etiquetas dos jogos copiados
 end;
 
 procedure TGDEmu.StartCopySelectedLocalGamesToSDCard(onCopyFished: PStartCopySelectedLocalGamesToSDCard);
