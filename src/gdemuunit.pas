@@ -2228,21 +2228,15 @@ begin
   end
   else
   begin
-    // Cache existe, carregar do cache
+    // Cache existe → confia nele (extração roda UMA vez por jogo). NÃO re-extrair
+    // só porque o InternalName veio vazio: para muitos jogos (homebrews, alguns
+    // CDI) a extração legitimamente dá vazio, e re-rodar o cdirip a cada scan
+    // (lendo a imagem inteira) tornava o carregamento/cópia lentíssimos. Para
+    // forçar nova extração, limpe o cache do jogo.
     AddCommandLog('Loading from cache', cacheJsonPath);
     try
       Result:=GetMetaFileInfoCache(game);
       AddCommandLog('Cache loaded', Format('InternalName: [%s], Length: %d', [Result.InternalName, Length(Result.InternalName)]));
-      
-      // Se o InternalName no cache está vazio, forçar re-extração
-      if Result.InternalName = '' then
-      begin
-        AddCommandLog('Cache has empty InternalName', 'Forcing re-extraction...');
-        // Deletar cache e tentar extrair novamente
-        DeleteFile(cacheJsonPath);
-        // Recursivamente chamar novamente (agora vai extrair)
-        Result:=GetMetaFileInfo(game);
-      end;
     except
       on E: Exception do
       begin
