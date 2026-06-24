@@ -89,6 +89,11 @@ type
       CurrentCoverDownloadActionCount: integer;
       CurrentCoverDownloadActionGameName: String;
       CoverDownloadIsSD: Boolean; // alvo do lote: False=biblioteca, True=SD Card
+      // Config do scraper (persistida na biblioteca):
+      ScrapeBoxart: Boolean;   // baixar capa (boxart)
+      ScrapeTitle: Boolean;    // baixar tela de título
+      ScrapeSnap: Boolean;     // baixar screenshot in-game
+      ScrapeOverwrite: Boolean; // re-baixar mesmo se já houver no cache
       CurrentSDCardId: String;    // ID do cartão carregado (de gdemugui-card.json)
       CurrentSDCardLabel: String; // rótulo amigável do cartão carregado
       SDCardRegistry: TStringList; // id=rótulo de todos os cartões conhecidos
@@ -132,6 +137,7 @@ type
       procedure CreateInfoCacheFile(game: TGDEmuGame);
       function GetMetaFileInfo(game: TGDEmuGame): TGDEmuGame;
       function GetGameCover(game: TGDEmuGame): String;
+      procedure ScrapeGameImages(game: TGDEmuGame);
       function GetMetaFileInfoCache(game: TGDEmuGame): TGDEmuGame;
       function GetCommandLog: TStringList;
       procedure ClearCommandLog;
@@ -139,6 +145,9 @@ type
       function TryGetCoverFromGamesDatabase(game: TGDEmuGame; searchTerms: TStringList): String;
       function GetLibretroBoxartIndex: TStringList;
       function TryGetCoverFromLibretro(game: TGDEmuGame; searchTerms: TStringList): String;
+      function MatchLibretroFilename(game: TGDEmuGame; searchTerms: TStringList): String;
+      function DownloadLibretroImage(const aFilename, aNamedDir, aCacheFile: String): Boolean;
+      function BuildLibretroSearchTerms(game: TGDEmuGame): TStringList;
       function NormalizeForMatch(const s: String): String;
       function DownloadAndValidateImage(imageUrl: String; cacheFilename: String): Boolean;
       function EncodeURLComponent(const s: String): String;
@@ -277,10 +286,10 @@ begin
     if CoverDownloadIsSD then g:=SDCardGamesList[i] else g:=LocalGamesList[i];
     CurrentCoverDownloadActionGameName:=g.Name;
     try
-      GetGameCover(g);
+      ScrapeGameImages(g); // baixa as imagens habilitadas na config do scraper
     except
       on E: Exception do
-        AddCommandLog('Cover em lote: erro', Format('%s: %s', [g.Name, E.Message]));
+        AddCommandLog('Scraper em lote: erro', Format('%s: %s', [g.Name, E.Message]));
     end;
     CurrentCoverDownloadActionPosition:=i + 1;
   end;
@@ -326,6 +335,10 @@ begin
   CatalogTable:=nil;
   SDCardRegistry:=TStringList.Create;
   SDCardRegistry.NameValueSeparator:='=';
+  ScrapeBoxart:=True;   // padrão: só a capa
+  ScrapeTitle:=False;
+  ScrapeSnap:=False;
+  ScrapeOverwrite:=False;
   InitSSLInterface;
 end;
 
@@ -669,6 +682,10 @@ begin
     end;
     root.Add('cardRegistry', cardsArr);
 
+    // Config do scraper.
+    root.Add('scrapeConfig', TJSONObject.Create(['boxart', ScrapeBoxart,
+      'title', ScrapeTitle, 'snap', ScrapeSnap, 'overwrite', ScrapeOverwrite]));
+
     sl:=TStringList.Create;
     try
       sl.Text:=root.FormatJSON;
@@ -764,6 +781,16 @@ begin
         LocalGamesList[i]:=game;
       end;
       LocalGamesListCount:=gamesArr.Count;
+    end;
+
+    // Config do scraper.
+    d:=root.Find('scrapeConfig');
+    if (d <> nil) and (d.JSONType = jtObject) then
+    begin
+      ScrapeBoxart:=TJSONObject(d).Get('boxart', True);
+      ScrapeTitle:=TJSONObject(d).Get('title', False);
+      ScrapeSnap:=TJSONObject(d).Get('snap', False);
+      ScrapeOverwrite:=TJSONObject(d).Get('overwrite', False);
     end;
 
     // Registro de cartões conhecidos (id -> rótulo).
@@ -1796,15 +1823,15 @@ end;
 
 // Casa o jogo contra o índice libretro pelo título-base (sem região/flags),
 // preferindo a região do jogo, e baixa o PNG para cache/<slug>.png.
-function TGDEmu.TryGetCoverFromLibretro(game: TGDEmuGame; searchTerms: TStringList): String;
+// Casa o jogo contra o índice libretro e devolve o nome de arquivo Redump
+// (ex.: "Sonic Adventure (USA)"), ou '' se nada casar. O mesmo nome serve para
+// boxart/title/snapshot (os 3 diretórios usam os mesmos nomes).
+function TGDEmu.MatchLibretroFilename(game: TGDEmuGame; searchTerms: TStringList): String;
 var
   index: TStringList;
   i, j, p, rank, bestRank: integer;
-  entry, entryBase, entryNorm, termNorm, best, url, encoded, cachePng: String;
+  entry, entryBase, entryNorm, termNorm: String;
   regionPref: array of String;
-  ms: TMemoryStream;
-  pic: TPicture;
-  c: Char;
 begin
   Result:='';
   index:=GetLibretroBoxartIndex;
@@ -1823,7 +1850,7 @@ begin
   else
     regionPref:=['(USA)', '(World)', '(Europe)', '(UK)', '(Japan)'];
 
-  best:=''; bestRank:=MaxInt;
+  bestRank:=MaxInt;
   for j:=0 to searchTerms.Count -1 do
   begin
     termNorm:=NormalizeForMatch(CleanGameNameForSearch(searchTerms[j]));
@@ -1831,38 +1858,41 @@ begin
     for i:=0 to index.Count -1 do
     begin
       entry:=index[i];
-      // título-base = tudo antes do primeiro " (" (região/idiomas/flags Redump)
       p:=Pos(' (', entry);
       if p > 0 then entryBase:=Copy(entry, 1, p-1) else entryBase:=entry;
       entryNorm:=NormalizeForMatch(entryBase);
       if entryNorm = termNorm then
       begin
-        rank:=Length(regionPref); // não preferida = pior
+        rank:=Length(regionPref);
         for p:=0 to High(regionPref) do
           if Pos(regionPref[p], entry) > 0 then begin rank:=p; Break; end;
         if rank < bestRank then
         begin
           bestRank:=rank;
-          best:=entry;
-          if rank = 0 then Break; // melhor região possível já achada
+          Result:=entry;
+          if rank = 0 then Break;
         end;
       end;
     end;
-    if (best <> '') and (bestRank = 0) then Break;
+    if (Result <> '') and (bestRank = 0) then Break;
   end;
+end;
 
-  if best = '' then
-  begin
-    AddCommandLog('Libretro', 'Nenhuma capa casou pelo título');
-    Exit;
-  end;
-  AddCommandLog('Libretro match', best);
-
-  // Monta a URL (só espaço precisa virar %20; parênteses/apóstrofo são literais).
+// Baixa uma imagem do libretro (aNamedDir = 'Named_Boxarts'/'Named_Titles'/
+// 'Named_Snaps') pelo nome Redump aFilename, valida e salva em aCacheFile.
+function TGDEmu.DownloadLibretroImage(const aFilename, aNamedDir, aCacheFile: String): Boolean;
+var
+  encoded, url: String;
+  i: integer;
+  c: Char;
+  ms: TMemoryStream;
+  pic: TPicture;
+begin
+  Result:=False;
   encoded:='';
-  for i:=1 to Length(best) do
+  for i:=1 to Length(aFilename) do
   begin
-    c:=best[i];
+    c:=aFilename[i];
     if c = ' ' then encoded:=encoded + '%20'
     else if c = '#' then encoded:=encoded + '%23'
     else if c = '?' then encoded:=encoded + '%3F'
@@ -1871,25 +1901,24 @@ begin
     else if c = '%' then encoded:=encoded + '%25'
     else encoded:=encoded + c;
   end;
-  url:='https://thumbnails.libretro.com/Sega%20-%20Dreamcast/Named_Boxarts/' + encoded + '.png';
+  url:='https://thumbnails.libretro.com/Sega%20-%20Dreamcast/' + aNamedDir + '/' + encoded + '.png';
 
-  cachePng:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.png']);
   ms:=TMemoryStream.Create;
   pic:=TPicture.Create;
   try
     try
       HTTPClient.Get(url, ms);
-      AddCommandLog('Libretro download', Format('%s (%d bytes)', [url, ms.Size]));
       if ms.Size > 1024 then
       begin
         ms.Position:=0;
-        pic.LoadFromStream(ms); // detecta PNG pelo conteúdo (não pela extensão)
+        pic.LoadFromStream(ms);
         if (pic.Width > 100) and (pic.Height > 100) then
         begin
           ms.Position:=0;
-          ms.SaveToFile(cachePng);
-          Result:=cachePng;
-          AddCommandLog('Libretro OK', Format('Capa %dx%d salva', [pic.Width, pic.Height]));
+          ms.SaveToFile(aCacheFile);
+          Result:=True;
+          AddCommandLog('Libretro OK', Format('%s -> %s (%dx%d)',
+            [aNamedDir, ExtractFileName(aCacheFile), pic.Width, pic.Height]));
         end;
       end;
     except
@@ -1899,6 +1928,88 @@ begin
   finally
     pic.Free;
     ms.Free;
+  end;
+end;
+
+function TGDEmu.TryGetCoverFromLibretro(game: TGDEmuGame; searchTerms: TStringList): String;
+var best, cachePng: String;
+begin
+  Result:='';
+  best:=MatchLibretroFilename(game, searchTerms);
+  if best = '' then
+  begin
+    AddCommandLog('Libretro', 'Nenhuma imagem casou pelo título');
+    Exit;
+  end;
+  AddCommandLog('Libretro match', best);
+  cachePng:=ConcatPaths([ApplicationPath,'cache',game.SlugName + '.png']);
+  if DownloadLibretroImage(best, 'Named_Boxarts', cachePng) then
+    Result:=cachePng;
+end;
+
+// Monta as variações de nome para casar no libretro (InternalName do IP.BIN como
+// prioridade, depois nome limpo/original/legal/slug). Extrai metadados do IP.BIN
+// se ainda não houver. O chamador libera a lista.
+function TGDEmu.BuildLibretroSearchTerms(game: TGDEmuGame): TStringList;
+var gm: TGDEmuGame; cleanInternal, cleaned: String;
+begin
+  Result:=TStringList.Create;
+  gm:=game;
+  if (game.InternalName = '') or (game.InternalName = game.Name) then
+  begin
+    try
+      gm:=GetMetaFileInfo(game);
+      if not Assigned(gm) then gm:=game;
+    except
+      gm:=game;
+    end;
+  end;
+  if gm.InternalName <> '' then
+  begin
+    cleanInternal:=Trim(gm.InternalName);
+    cleanInternal:=ReplaceRegExpr('[\x00-\x08\x0B-\x1F]', cleanInternal, '');
+    cleanInternal:=ReplaceRegExpr('\s+', cleanInternal, ' ');
+    cleanInternal:=Trim(cleanInternal);
+    if cleanInternal <> '' then Result.Add(cleanInternal);
+  end;
+  if gm.Name <> '' then
+  begin
+    cleaned:=CleanGameNameForSearch(gm.Name);
+    if (cleaned <> '') and (Result.IndexOf(cleaned) = -1) then Result.Add(cleaned);
+    if Result.IndexOf(gm.Name) = -1 then Result.Add(gm.Name);
+  end;
+  if (gm.LegalName <> '') and (Result.IndexOf(gm.LegalName) = -1) then Result.Add(gm.LegalName);
+  if (gm.SlugName <> '') and (Result.IndexOf(gm.SlugName) = -1) then Result.Add(gm.SlugName);
+end;
+
+// Scraper: baixa, conforme a config (ScrapeBoxart/Title/Snap), as imagens
+// habilitadas para o jogo. Boxart=<slug>.png, Title=<slug>-title.png,
+// Snap=<slug>-snap.png. Respeita ScrapeOverwrite.
+procedure TGDEmu.ScrapeGameImages(game: TGDEmuGame);
+var
+  searchTerms: TStringList;
+  best, cacheDir: String;
+
+  procedure FetchType(enabled: Boolean; const namedDir, suffix: String);
+  var f: String;
+  begin
+    if not enabled then Exit;
+    f:=ConcatPaths([cacheDir, game.SlugName + suffix + '.png']);
+    if (not ScrapeOverwrite) and FileExists(f) then Exit;
+    DownloadLibretroImage(best, namedDir, f);
+  end;
+
+begin
+  cacheDir:=ConcatPaths([ApplicationPath,'cache']);
+  searchTerms:=BuildLibretroSearchTerms(game);
+  try
+    best:=MatchLibretroFilename(game, searchTerms);
+    if best = '' then Exit;
+    FetchType(ScrapeBoxart, 'Named_Boxarts', '');
+    FetchType(ScrapeTitle,  'Named_Titles',  '-title');
+    FetchType(ScrapeSnap,   'Named_Snaps',   '-snap');
+  finally
+    searchTerms.Free;
   end;
 end;
 

@@ -83,6 +83,7 @@ type
     procedure TagCardGamesClick(Sender: TObject);
     procedure RenameCardClick(Sender: TObject);
     procedure CloseSDCardClick(Sender: TObject);
+    procedure ScrapeOptionClick(Sender: TObject);
   private
 
   public
@@ -445,6 +446,28 @@ begin
   end;
 end;
 
+// Liga/desliga uma opção do scraper (Tag: 1=boxart,2=title,3=snap,4=overwrite)
+// e persiste a config na biblioteca.
+procedure TMainWindow.ScrapeOptionClick(Sender: TObject);
+var mi: TMenuItem;
+begin
+  if not (Sender is TMenuItem) then Exit;
+  mi:=TMenuItem(Sender);
+  case mi.Tag of
+    1: GDEmu.ScrapeBoxart:=not GDEmu.ScrapeBoxart;
+    2: GDEmu.ScrapeTitle:=not GDEmu.ScrapeTitle;
+    3: GDEmu.ScrapeSnap:=not GDEmu.ScrapeSnap;
+    4: GDEmu.ScrapeOverwrite:=not GDEmu.ScrapeOverwrite;
+  end;
+  case mi.Tag of
+    1: mi.Checked:=GDEmu.ScrapeBoxart;
+    2: mi.Checked:=GDEmu.ScrapeTitle;
+    3: mi.Checked:=GDEmu.ScrapeSnap;
+    4: mi.Checked:=GDEmu.ScrapeOverwrite;
+  end;
+  GDEmu.SaveLibrary; // persiste a config do scraper
+end;
+
 // "Fecha" o cartão atual para carregar outro sem reiniciar o app.
 procedure TMainWindow.CloseSDCardClick(Sender: TObject);
 begin
@@ -651,7 +674,7 @@ end;
 // Biblioteca de Jogos e o que é do SD Card ficam separados e nomeados. Os menus
 // originais do .lfm (confusos e com handlers trocados) são descartados.
 procedure BuildMainMenu;
-var top, autoItem: TMenuItem;
+var top, autoItem, scraper, mi: TMenuItem;
 begin
   MainWindow.MainWindowMenu.Items.Clear;
 
@@ -662,7 +685,7 @@ begin
   // Biblioteca de Jogos (lado esquerdo)
   top:=AddMenu(MainWindow.MainWindowMenu.Items, 'Biblioteca de Jogos', nil);
   AddMenu(top, 'Adicionar diretórios de jogos…', @MainWindow.OpenLocalGamesDirectoriesDialogBitBtnClick);
-  AddMenu(top, 'Baixar capas da biblioteca', @MainWindow.DownloadAllCoversClick);
+  AddMenu(top, 'Scrapar biblioteca', @MainWindow.DownloadAllCoversClick);
 
   // SD Card (lado direito)
   top:=AddMenu(MainWindow.MainWindowMenu.Items, 'SD Card', nil);
@@ -676,13 +699,24 @@ begin
   AddMenu(top, 'Remover jogo do SD Card', @MainWindow.RemoveGameFromSDCardBitBtnClick);
   AddMenu(top, 'Atualizar lista de jogos (GDMenu)', @MainWindow.UpdateGamesListSDCardBitBtnClick);
   AddSeparator(top);
-  AddMenu(top, 'Baixar capas do SD Card', @MainWindow.DownloadAllSDCoversClick);
+  AddMenu(top, 'Scrapar SD Card', @MainWindow.DownloadAllSDCoversClick);
 
-  // Ferramentas / Opções
+  // Ferramentas
   top:=AddMenu(MainWindow.MainWindowMenu.Items, 'Ferramentas', nil);
   AddMenu(top, 'Criar disco OpenBOR', @MainWindow.OpenBORDiscCreatorMenuItemClick);
   AddSeparator(top);
-  autoItem:=AddMenu(top, 'Baixar capas automaticamente (ao escanear)',
+  // Submenu Scraper — o usuário escolhe o que baixar.
+  scraper:=AddMenu(top, 'Scraper', nil);
+  mi:=AddMenu(scraper, 'Baixar capa (boxart)', @MainWindow.ScrapeOptionClick);
+  mi.Tag:=1; mi.ShowAlwaysCheckable:=True; mi.Checked:=GDEmu.ScrapeBoxart;
+  mi:=AddMenu(scraper, 'Baixar tela de título', @MainWindow.ScrapeOptionClick);
+  mi.Tag:=2; mi.ShowAlwaysCheckable:=True; mi.Checked:=GDEmu.ScrapeTitle;
+  mi:=AddMenu(scraper, 'Baixar screenshot', @MainWindow.ScrapeOptionClick);
+  mi.Tag:=3; mi.ShowAlwaysCheckable:=True; mi.Checked:=GDEmu.ScrapeSnap;
+  AddSeparator(scraper);
+  mi:=AddMenu(scraper, 'Sobrescrever existentes', @MainWindow.ScrapeOptionClick);
+  mi.Tag:=4; mi.ShowAlwaysCheckable:=True; mi.Checked:=GDEmu.ScrapeOverwrite;
+  autoItem:=AddMenu(scraper, 'Scraping automático ao escanear',
     @MainWindow.DownloadCoverMenuItemClick);
   autoItem.ShowAlwaysCheckable:=True;
   autoItem.Checked:=AutoDownloadCovers;
@@ -729,7 +763,7 @@ begin
   // Biblioteca de Jogos (esquerda). Alinha o botão de pasta à esquerda p/ empacotar.
   MainWindow.OpenLocalGamesDirectoriesDialogBitBtn.Align:=alLeft;
   AddToolButton(MainWindow.LocalGamesToolsButtonsPanel, 'covers.png',
-    'Baixar capas da biblioteca', @MainWindow.DownloadAllCoversClick);
+    'Scrapar biblioteca', @MainWindow.DownloadAllCoversClick);
 
   // SD Card (direita).
   AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'eject.png',
@@ -739,7 +773,7 @@ begin
   AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'rename.png',
     'Renomear este cartão', @MainWindow.RenameCardClick);
   AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'covers.png',
-    'Baixar capas do SD Card', @MainWindow.DownloadAllSDCoversClick);
+    'Scrapar SD Card', @MainWindow.DownloadAllSDCoversClick);
 end;
 
 procedure LoadLibraryIntoUI;
