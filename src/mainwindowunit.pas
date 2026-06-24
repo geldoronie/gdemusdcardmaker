@@ -922,6 +922,7 @@ end;
 
 procedure OnFinishSDCardGamesScan;
 var cardName: String;
+    doScrape: Boolean;
 begin
   // Identidade do cartão: lê de gdemugui-card.json; se for um cartão novo (sem
   // arquivo), pede um nome e cria a identidade (vale também p/ cartões já cheios).
@@ -937,11 +938,24 @@ begin
   GDEmu.MarkLocalGamesPresentOnSDCard;
   RefreshLocalGamesList;
   UpdateDiskUsageBar;
-  // Por padrão NÃO baixa capas ao carregar o SD (pode ser lento). Só se o usuário
-  // ativou "Baixar capas automaticamente".
-  if AutoDownloadCovers and (GDEmu.SDCardGamesListCount > 0) then
+
+  // Scraping ao carregar: pode demorar, então é uma decisão explícita. Se o
+  // "Scraping automático" estiver ligado, roda direto; senão, pergunta agora.
+  doScrape:=False;
+  if GDEmu.SDCardGamesListCount > 0 then
   begin
-    ProgressWindow.SetTitle('Baixando capas do SD Card');
+    if AutoDownloadCovers then
+      doScrape:=True
+    else if GDEmu.ScrapeBoxart or GDEmu.ScrapeTitle or GDEmu.ScrapeSnap then
+      doScrape:=Application.MessageBox(
+        PChar('Baixar as imagens (scraping) dos jogos deste cartão agora?' + LineEnding +
+          'Pode demorar — dá para fazer depois em SD Card > Scrapar SD Card.'),
+        'Scraper', MB_YESNO) = IDYES;
+  end;
+
+  if doScrape then
+  begin
+    ProgressWindow.SetTitle('Scrapando o SD Card');
     ProgressWindow.SetMax(GDEmu.SDCardGamesListCount);
     GDEmu.StartDownloadAllSDCovers(@OnFinishCoversDownload);
     ProgressWindow.ShowProgress;
