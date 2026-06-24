@@ -82,6 +82,7 @@ type
     procedure DownloadAllSDCoversClick(Sender: TObject);
     procedure TagCardGamesClick(Sender: TObject);
     procedure RenameCardClick(Sender: TObject);
+    procedure CloseSDCardClick(Sender: TObject);
   private
 
   public
@@ -443,6 +444,32 @@ begin
   end;
 end;
 
+// "Fecha" o cartão atual para carregar outro sem reiniciar o app.
+procedure TMainWindow.CloseSDCardClick(Sender: TObject);
+begin
+  if not GDEmu.SDCardLoaded then
+  begin
+    ShowMessage('Nenhum cartão carregado.');
+    Exit;
+  end;
+  GDEmu.CloseSDCard;
+  if SDCardView <> nil then
+  begin
+    SDCardView.ClearGames;
+    SDCardView.Invalidate;
+  end;
+  GDEmu.MarkLocalGamesPresentOnSDCard; // SD vazio: limpa as marcas "✓ no SD"
+  RefreshLocalGamesList;
+  // Reseta a barra de uso de disco e limpa as labels de info do SD.
+  DiskUseProgressBar.Position:=0;
+  if DiskUsageLabel <> nil then DiskUsageLabel.Caption:='';
+  SDCardGameNameLabel.Caption:='';
+  SDCardGameDiscTypeLabel.Caption:='';
+  SDCardGamePathLabel.Caption:='';
+  SDCardGameIndexLabel.Caption:='';
+  SDCardGameMD5Label.Caption:='';
+end;
+
 // Download de capas em lote para os jogos do SD Card (manual, sob demanda).
 procedure TMainWindow.DownloadAllSDCoversClick(Sender: TObject);
 begin
@@ -639,6 +666,7 @@ begin
   // SD Card (lado direito)
   top:=AddMenu(MainWindow.MainWindowMenu.Items, 'SD Card', nil);
   AddMenu(top, 'Carregar SD Card…', @MainWindow.LoadSDCardBitBtnClick);
+  AddMenu(top, 'Fechar SD Card', @MainWindow.CloseSDCardClick);
   AddMenu(top, 'Renomear este cartão…', @MainWindow.RenameCardClick);
   AddSeparator(top);
   AddMenu(top, 'Marcar jogos deste cartão na biblioteca', @MainWindow.TagCardGamesClick);

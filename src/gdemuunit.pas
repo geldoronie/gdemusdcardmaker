@@ -100,6 +100,7 @@ type
       procedure ScanLocalGamesDirectories;
       procedure StartScanLocalGamesDirectories(onLocalGamesScanFinished: PStartScanLocalGamesDirectories);
       procedure ScanSDCardGamesDirectory;
+      procedure CloseSDCard;
       procedure StartScanSDCardGamesDirectories(onSDCardGamesScanFinished: PStartScanSDCardGamesDirectories);
       procedure DownloadAllCovers;
       procedure StartDownloadAllLocalCovers(onFinish: PStartDownloadCovers);
@@ -353,6 +354,18 @@ begin
   SDCardLoaded:=False;
   SDCardGamesDirectory:=Path;
   //ShowMessage(FindDiskFilename(SDCardGamesDirectory));
+end;
+
+// "Ejeta" o cartão atual: zera todo o estado do SD para que outro possa ser
+// carregado sem reiniciar o app.
+procedure TGDEmu.CloseSDCard;
+begin
+  ClearSDCardGamesDirectories; // libera os objetos e zera a contagem
+  SDCardGamesDirectory:='';
+  SDCardGamesListIndexCount:=0;
+  SDCardLoaded:=False;
+  CurrentSDCardId:='';
+  CurrentSDCardLabel:='';
 end;
 
 procedure TGDEmu.ScanLocalGamesDirectories;
