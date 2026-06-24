@@ -138,6 +138,7 @@ type
       function GetMetaFileInfo(game: TGDEmuGame): TGDEmuGame;
       function GetGameCover(game: TGDEmuGame): String;
       procedure ScrapeGameImages(game: TGDEmuGame);
+      function ForceRefreshGameMetadata(game: TGDEmuGame): Boolean;
       function ResolveImageFile(game: TGDEmuGame; const aSuffix: String): String;
       function GetMetaFileInfoCache(game: TGDEmuGame): TGDEmuGame;
       function GetCommandLog: TStringList;
@@ -2078,6 +2079,51 @@ begin
     FetchType(ScrapeSnap,   'Named_Snaps',   '-snap');
   finally
     searchTerms.Free;
+  end;
+end;
+
+// Força a re-obtenção de TODO o metadado de um jogo (botão "Download MetaData"):
+// 1) re-extrai o IP.BIN (apaga o cache e roda cdirip/GDI) — só se o disco estiver
+//    acessível, para não apagar metadados quando a coleção ROM está offline;
+// 2) re-enriquece do catálogo (gênero/dev/ano);
+// 3) força o re-download das imagens habilitadas no scraper.
+// Retorna True se conseguiu re-extrair o IP.BIN (disco disponível).
+function TGDEmu.ForceRefreshGameMetadata(game: TGDEmuGame): Boolean;
+var
+  discFiles: TStringList;
+  cachePath: String;
+  oldOverwrite: Boolean;
+begin
+  Result:=False;
+  if game = nil then Exit;
+
+  // 1) IP.BIN — só re-extrai se houver disco acessível na pasta do jogo.
+  discFiles:=TStringList.Create;
+  try
+    FileUtil.FindAllFiles(discFiles, game.Path, '*.gdi;*.cdi', False);
+    if discFiles.Count > 0 then
+    begin
+      cachePath:=ConcatPaths([ApplicationPath,'cache', game.SlugName + '.json']);
+      if FileExists(cachePath) then DeleteFile(cachePath);
+      game.InternalName:='';
+      GetMetaFileInfo(game);     // re-extrai (cdirip/GDI) e muta o game
+      CreateInfoCacheFile(game); // re-grava o cache
+      Result:=True;
+    end;
+  finally
+    discFiles.Free;
+  end;
+
+  // 2) Catálogo (gênero/dev/ano).
+  EnrichGameFromCatalog(game);
+
+  // 3) Imagens — força o re-download conforme a config do scraper.
+  oldOverwrite:=ScrapeOverwrite;
+  ScrapeOverwrite:=True;
+  try
+    ScrapeGameImages(game);
+  finally
+    ScrapeOverwrite:=oldOverwrite;
   end;
 end;
 

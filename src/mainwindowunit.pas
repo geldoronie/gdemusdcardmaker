@@ -880,6 +880,14 @@ end;
 // Liga o clique-para-alternar nas capas e cria os rótulos de tipo sob elas.
 procedure BuildImageSwitchers;
 begin
+  // O antigo "Download Cover" agora força re-obter todo o metadado do jogo.
+  MainWindow.LocalGameDownloadCoverBitBtn.Caption:='Download MetaData';
+  MainWindow.LocalGameDownloadCoverBitBtn.Hint:='Força re-baixar/re-extrair todo o metadado deste jogo';
+  MainWindow.LocalGameDownloadCoverBitBtn.ShowHint:=True;
+  MainWindow.SDCardDownloadCoverBitBtn.Caption:='Download MetaData';
+  MainWindow.SDCardDownloadCoverBitBtn.Hint:='Força re-baixar/re-extrair todo o metadado deste jogo';
+  MainWindow.SDCardDownloadCoverBitBtn.ShowHint:=True;
+
   MainWindow.LocalGameCoverImage.OnClick:=@MainWindow.LocalCoverCycle;
   MainWindow.LocalGameCoverImage.Cursor:=crHandPoint;
   MainWindow.LocalGameCoverImage.ShowHint:=True;
@@ -1027,51 +1035,39 @@ begin
   end;
 end;
 
+// "Download MetaData": força re-obter TODO o metadado do jogo selecionado da
+// biblioteca (re-extrai IP.BIN, re-enriquece do catálogo, re-baixa imagens).
 procedure TMainWindow.LocalGameDownloadCoverBitBtnClick(Sender: TObject);
-var
-  coverImageFilename: String;
 begin
-  if GDEmu.LocalGamesListCount > 0 then
-  begin
-    LocalGameDownloadCoverBitBtn.Enabled:=False;
-    try
-      Application.ProcessMessages;
-      coverImageFilename:=GDEmu.GetGameCover(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
-      if coverImageFilename <> '' then
-      begin
-        try
-          LocalGameCoverImage.Picture.LoadFromFile(coverImageFilename);
-        except
-          LocalGameCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-        end;
-      end;
-    finally
-      LocalGameDownloadCoverBitBtn.Enabled:=True;
-    end;
+  if (GDEmu.LocalGamesListCount = 0) or (LibraryView.ItemIndex < 0) then Exit;
+  LocalGameDownloadCoverBitBtn.Enabled:=False;
+  Screen.Cursor:=crHourGlass;
+  try
+    Application.ProcessMessages;
+    GDEmu.ForceRefreshGameMetadata(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
+    GDEmu.SaveLibrary;
+    RefreshLocalGamesList;
+    LocalGamesListSelectionChange(nil, False); // re-exibe info + imagem atualizados
+  finally
+    Screen.Cursor:=crDefault;
+    LocalGameDownloadCoverBitBtn.Enabled:=True;
   end;
 end;
 
+// "Download MetaData": idem para o jogo selecionado do SD Card.
 procedure TMainWindow.SDCardDownloadCoverBitBtnClick(Sender: TObject);
-var
-  coverImageFilename: String;
 begin
-  if GDEmu.SDCardGamesListCount > 0 then
-  begin
-    SDCardDownloadCoverBitBtn.Enabled:=False;
-    try
-      Application.ProcessMessages;
-      coverImageFilename:=GDEmu.GetGameCover(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
-      if coverImageFilename <> '' then
-      begin
-        try
-          SDCardCoverImage.Picture.LoadFromFile(coverImageFilename);
-        except
-          SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-        end;
-      end;
-    finally
-      SDCardDownloadCoverBitBtn.Enabled:=True;
-    end;
+  if (GDEmu.SDCardGamesListCount = 0) or (SDCardView.ItemIndex < 0) then Exit;
+  SDCardDownloadCoverBitBtn.Enabled:=False;
+  Screen.Cursor:=crHourGlass;
+  try
+    Application.ProcessMessages;
+    GDEmu.ForceRefreshGameMetadata(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
+    RefreshSDCardList;
+    SDCardListSelectionChange(nil, False);
+  finally
+    Screen.Cursor:=crDefault;
+    SDCardDownloadCoverBitBtn.Enabled:=True;
   end;
 end;
 
