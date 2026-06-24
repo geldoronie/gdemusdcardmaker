@@ -84,6 +84,10 @@ type
     procedure RenameCardClick(Sender: TObject);
     procedure CloseSDCardClick(Sender: TObject);
     procedure ScrapeOptionClick(Sender: TObject);
+    procedure ShowLocalImage;
+    procedure ShowSDImage;
+    procedure LocalCoverCycle(Sender: TObject);
+    procedure SDCoverCycle(Sender: TObject);
   private
 
   public
@@ -97,6 +101,10 @@ var
   SDCardView: TGameLibraryView = nil; // lista rica do SD Card (substitui o TCheckListBox)
   AutoDownloadCovers: Boolean = False; // preferência: baixar capas ao fim de cada scan
   ToolButtonLeft: integer = 1000; // ordena os botões de toolbar criados em runtime
+  LocalImgType: integer = 0; // imagem mostrada no painel local: 0=capa 1=título 2=snap
+  SDImgType: integer = 0;
+  LocalImgLabel: TLabel = nil; // rótulo do tipo de imagem sob a capa
+  SDImgLabel: TLabel = nil;
 
 procedure OnFinishGamesCopy;
 procedure OnFinishCoversDownload;
@@ -113,6 +121,53 @@ implementation
 {$R *.lfm}
 
 { TMainWindow }
+
+// --- Helpers de imagem do jogo (capa/título/screenshot) ---
+
+// Sufixo de cache por tipo de imagem (0=capa, 1=título, 2=snapshot).
+function CoverSuffix(t: integer): String;
+begin
+  case t of 1: Result:='-title'; 2: Result:='-snap'; else Result:=''; end;
+end;
+
+function CoverTypeName(t: integer): String;
+begin
+  case t of 1: Result:='Tela de título'; 2: Result:='Screenshot'; else Result:='Capa'; end;
+end;
+
+// Caminho da imagem do tipo t no cache, ou '' se não existir. Boxart aceita .jpg legado.
+function GameImageFileFor(game: TGDEmuGame; t: integer): String;
+begin
+  Result:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + CoverSuffix(t) + '.png']);
+  if FileExists(Result) then Exit;
+  if t = 0 then
+  begin
+    Result:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + '.jpg']);
+    if FileExists(Result) then Exit;
+  end;
+  Result:='';
+end;
+
+// Primeiro tipo com imagem (preferindo capa); 0 se nenhum (mostra o gd-rom padrão).
+function FirstImageType(game: TGDEmuGame): integer;
+begin
+  if GameImageFileFor(game, 0) <> '' then Exit(0);
+  if GameImageFileFor(game, 1) <> '' then Exit(1);
+  if GameImageFileFor(game, 2) <> '' then Exit(2);
+  Result:=0;
+end;
+
+// Próximo tipo com imagem após 'cur' (ciclando); devolve 'cur' se não houver outro.
+function NextImageType(game: TGDEmuGame; cur: integer): integer;
+var i, t: integer;
+begin
+  Result:=cur;
+  for i:=1 to 3 do
+  begin
+    t:=(cur + i) mod 3;
+    if GameImageFileFor(game, t) <> '' then Exit(t);
+  end;
+end;
 
 procedure TMainWindow.OpenLocalGamesDirectoriesDialogBitBtnClick(Sender: TObject);
 begin
@@ -134,8 +189,6 @@ begin
 end;
 
 procedure TMainWindow.SDCardListSelectionChange(Sender: TObject; User: boolean);
-var
-    coverImageFilename: String;
 begin
   // User parameter is part of the event signature but not used
   if GDEmu.SDCardGamesListCount > 0 then
@@ -155,13 +208,9 @@ begin
     SDCardGameIndexLabel.Caption:='Index: ' + Format('[%.2d]',[GDEmu.SDCardGamesList[SDCardView.ItemIndex].Index]);
     SDCardGameMD5Label.Caption:='MD5: ' + GDEmu.SDCardGamesList[SDCardView.ItemIndex].Id;
     
-    // Verificar se há capa em cache, senão mostrar padrão
-    coverImageFilename:=GetCachedCoverImage(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
-    try
-      SDCardCoverImage.Picture.LoadFromFile(coverImageFilename);
-    except
-      SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-    end;
+    // Imagem: primeiro tipo disponível (capa preferida); clique alterna título/snap.
+    SDImgType:=FirstImageType(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
+    ShowSDImage;
   end;
 end;
 
@@ -272,8 +321,6 @@ end;
 
 procedure TMainWindow.LocalGamesListSelectionChange(Sender: TObject;
   User: boolean);
-var
-    coverImageFilename: String;
 begin
   // User parameter is part of the event signature but not used
   if GDEmu.LocalGamesListCount > 0 then
@@ -292,13 +339,9 @@ begin
     LocalGamePathLabel.Caption:='Path: ' + GDEmu.LocalGamesList[LibraryView.ItemIndex].Path;
     LocalGameMD5Label.Caption:='MD5: ' + GDEmu.LocalGamesList[LibraryView.ItemIndex].Id;
     
-    // Verificar se há capa em cache, senão mostrar padrão
-    coverImageFilename:=GetCachedCoverImage(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
-    try
-      LocalGameCoverImage.Picture.LoadFromFile(coverImageFilename);
-    except
-      LocalGameCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath ,'data','gdrom.png']));
-    end;
+    // Imagem: primeiro tipo disponível (capa preferida); clique alterna título/snap.
+    LocalImgType:=FirstImageType(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
+    ShowLocalImage;
   end;
 end;
 
@@ -776,6 +819,94 @@ begin
     'Scrapar SD Card', @MainWindow.DownloadAllSDCoversClick);
 end;
 
+procedure TMainWindow.ShowLocalImage;
+var game: TGDEmuGame; f: String;
+begin
+  if (LibraryView = nil) or (LibraryView.ItemIndex < 0) or
+     (LibraryView.ItemIndex >= GDEmu.LocalGamesListCount) then Exit;
+  game:=GDEmu.LocalGamesList[LibraryView.ItemIndex];
+  f:=GameImageFileFor(game, LocalImgType);
+  if f = '' then f:=ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']);
+  try
+    LocalGameCoverImage.Picture.LoadFromFile(f);
+  except
+    LocalGameCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']));
+  end;
+  if LocalImgLabel <> nil then
+    if NextImageType(game, LocalImgType) <> LocalImgType then
+      LocalImgLabel.Caption:=CoverTypeName(LocalImgType) + '  ▸'
+    else
+      LocalImgLabel.Caption:=CoverTypeName(LocalImgType);
+end;
+
+procedure TMainWindow.ShowSDImage;
+var game: TGDEmuGame; f: String;
+begin
+  if (SDCardView = nil) or (SDCardView.ItemIndex < 0) or
+     (SDCardView.ItemIndex >= GDEmu.SDCardGamesListCount) then Exit;
+  game:=GDEmu.SDCardGamesList[SDCardView.ItemIndex];
+  f:=GameImageFileFor(game, SDImgType);
+  if f = '' then f:=ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']);
+  try
+    SDCardCoverImage.Picture.LoadFromFile(f);
+  except
+    SDCardCoverImage.Picture.LoadFromFile(ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']));
+  end;
+  if SDImgLabel <> nil then
+    if NextImageType(game, SDImgType) <> SDImgType then
+      SDImgLabel.Caption:=CoverTypeName(SDImgType) + '  ▸'
+    else
+      SDImgLabel.Caption:=CoverTypeName(SDImgType);
+end;
+
+procedure TMainWindow.LocalCoverCycle(Sender: TObject);
+begin
+  if (LibraryView = nil) or (LibraryView.ItemIndex < 0) or
+     (LibraryView.ItemIndex >= GDEmu.LocalGamesListCount) then Exit;
+  LocalImgType:=NextImageType(GDEmu.LocalGamesList[LibraryView.ItemIndex], LocalImgType);
+  ShowLocalImage;
+end;
+
+procedure TMainWindow.SDCoverCycle(Sender: TObject);
+begin
+  if (SDCardView = nil) or (SDCardView.ItemIndex < 0) or
+     (SDCardView.ItemIndex >= GDEmu.SDCardGamesListCount) then Exit;
+  SDImgType:=NextImageType(GDEmu.SDCardGamesList[SDCardView.ItemIndex], SDImgType);
+  ShowSDImage;
+end;
+
+// Liga o clique-para-alternar nas capas e cria os rótulos de tipo sob elas.
+procedure BuildImageSwitchers;
+begin
+  MainWindow.LocalGameCoverImage.OnClick:=@MainWindow.LocalCoverCycle;
+  MainWindow.LocalGameCoverImage.Cursor:=crHandPoint;
+  MainWindow.LocalGameCoverImage.ShowHint:=True;
+  MainWindow.LocalGameCoverImage.Hint:='Clique para alternar capa / título / screenshot';
+  LocalImgLabel:=TLabel.Create(MainWindow);
+  LocalImgLabel.Parent:=MainWindow.LocalGameInfoPanel;
+  LocalImgLabel.SetBounds(10, 148, 154, 16); // faixa-legenda sobre a base da imagem
+  LocalImgLabel.Alignment:=taCenter;
+  LocalImgLabel.Transparent:=False;
+  LocalImgLabel.Color:=RGBToColor(40, 40, 40);
+  LocalImgLabel.Font.Color:=clWhite;
+  LocalImgLabel.Cursor:=crHandPoint;
+  LocalImgLabel.OnClick:=@MainWindow.LocalCoverCycle;
+
+  MainWindow.SDCardCoverImage.OnClick:=@MainWindow.SDCoverCycle;
+  MainWindow.SDCardCoverImage.Cursor:=crHandPoint;
+  MainWindow.SDCardCoverImage.ShowHint:=True;
+  MainWindow.SDCardCoverImage.Hint:='Clique para alternar capa / título / screenshot';
+  SDImgLabel:=TLabel.Create(MainWindow);
+  SDImgLabel.Parent:=MainWindow.SDCardGameInfoPanel;
+  SDImgLabel.SetBounds(10, 148, 154, 16);
+  SDImgLabel.Alignment:=taCenter;
+  SDImgLabel.Transparent:=False;
+  SDImgLabel.Color:=RGBToColor(40, 40, 40);
+  SDImgLabel.Font.Color:=clWhite;
+  SDImgLabel.Cursor:=crHandPoint;
+  SDImgLabel.OnClick:=@MainWindow.SDCoverCycle;
+end;
+
 procedure LoadLibraryIntoUI;
 begin
   if GDEmu.LoadLibrary then
@@ -786,6 +917,7 @@ begin
   RefreshLocalGamesList; // sempre cria o LibraryView (vazio se não houver biblioteca)
   BuildMainMenu;         // menu reorganizado: Biblioteca vs SD Card explícitos
   BuildToolbars;         // botões com ícones espelhando os menus
+  BuildImageSwitchers;   // capa clicável p/ alternar título/screenshot
 end;
 
 procedure OnFinishSDCardGamesScan;
