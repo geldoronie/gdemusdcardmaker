@@ -185,7 +185,8 @@ end;
 procedure TMainWindow.SDCardListSelectionChange(Sender: TObject; User: boolean);
 begin
   // User parameter is part of the event signature but not used
-  if GDEmu.SDCardGamesListCount > 0 then
+  if (GDEmu.SDCardGamesListCount > 0) and (SDCardView <> nil) and
+     (SDCardView.ItemIndex >= 0) and (SDCardView.ItemIndex < GDEmu.SDCardGamesListCount) then
   begin
     SDCardGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.SDCardGamesList[SDCardView.ItemIndex].Extension);
     with GDEmu.SDCardGamesList[SDCardView.ItemIndex] do
@@ -317,7 +318,8 @@ procedure TMainWindow.LocalGamesListSelectionChange(Sender: TObject;
   User: boolean);
 begin
   // User parameter is part of the event signature but not used
-  if GDEmu.LocalGamesListCount > 0 then
+  if (GDEmu.LocalGamesListCount > 0) and (LibraryView <> nil) and
+     (LibraryView.ItemIndex >= 0) and (LibraryView.ItemIndex < GDEmu.LocalGamesListCount) then
   begin
     LocalGameDiscTypeLabel.Caption:='Extension: ' + SysUtils.UpperCase(GDEmu.LocalGamesList[LibraryView.ItemIndex].Extension);
     with GDEmu.LocalGamesList[LibraryView.ItemIndex] do
@@ -1038,15 +1040,18 @@ end;
 // "Download MetaData": força re-obter TODO o metadado do jogo selecionado da
 // biblioteca (re-extrai IP.BIN, re-enriquece do catálogo, re-baixa imagens).
 procedure TMainWindow.LocalGameDownloadCoverBitBtnClick(Sender: TObject);
+var idx: integer;
 begin
   if (GDEmu.LocalGamesListCount = 0) or (LibraryView.ItemIndex < 0) then Exit;
+  idx:=LibraryView.ItemIndex;
   LocalGameDownloadCoverBitBtn.Enabled:=False;
   Screen.Cursor:=crHourGlass;
   try
     Application.ProcessMessages;
-    GDEmu.ForceRefreshGameMetadata(GDEmu.LocalGamesList[LibraryView.ItemIndex]);
+    GDEmu.ForceRefreshGameMetadata(GDEmu.LocalGamesList[idx]);
     GDEmu.SaveLibrary;
-    RefreshLocalGamesList;
+    RefreshLocalGamesList; // recria a lista (zera o ItemIndex)
+    if idx < LibraryView.Count then LibraryView.ItemIndex:=idx; // restaura a seleção
     LocalGamesListSelectionChange(nil, False); // re-exibe info + imagem atualizados
   finally
     Screen.Cursor:=crDefault;
@@ -1056,14 +1061,17 @@ end;
 
 // "Download MetaData": idem para o jogo selecionado do SD Card.
 procedure TMainWindow.SDCardDownloadCoverBitBtnClick(Sender: TObject);
+var idx: integer;
 begin
   if (GDEmu.SDCardGamesListCount = 0) or (SDCardView.ItemIndex < 0) then Exit;
+  idx:=SDCardView.ItemIndex;
   SDCardDownloadCoverBitBtn.Enabled:=False;
   Screen.Cursor:=crHourGlass;
   try
     Application.ProcessMessages;
-    GDEmu.ForceRefreshGameMetadata(GDEmu.SDCardGamesList[SDCardView.ItemIndex]);
+    GDEmu.ForceRefreshGameMetadata(GDEmu.SDCardGamesList[idx]);
     RefreshSDCardList;
+    if idx < SDCardView.Count then SDCardView.ItemIndex:=idx;
     SDCardListSelectionChange(nil, False);
   finally
     Screen.Cursor:=crDefault;
