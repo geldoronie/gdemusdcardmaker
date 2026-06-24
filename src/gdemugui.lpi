@@ -24,16 +24,16 @@
       <UseVersionInfo Value="True"/>
       <AutoIncrementBuild Value="True"/>
       <RevisionNr Value="1"/>
-      <BuildNr Value="16"/>
+      <BuildNr Value="112"/>
       <StringTable CompanyName="OpenSource" FileDescription="Executable" InternalName="gdemugui" LegalCopyright="MIT Licence" OriginalFilename="gdemugui"/>
     </VersionInfo>
-    <MacroValues Count="2">
+    <MacroValues Count="1">
       <Macro1 Name="LCLWidgetType" Value="qt5"/>
     </MacroValues>
     <BuildModes Count="4">
       <Item1 Name="Debug QT5" Default="True"/>
       <Item2 Name="Release QT5">
-        <MacroValues Count="2">
+        <MacroValues Count="1">
           <Macro1 Name="LCLWidgetType" Value="qt5"/>
         </MacroValues>
         <CompilerOptions>
@@ -51,6 +51,9 @@
             </Optimizations>
           </CodeGeneration>
           <Linking>
+            <Debugging>
+              <DebugInfoType Value="dsDwarf3"/>
+            </Debugging>
             <Options>
               <LinkerOptions Value="--pointer-arithmetic"/>
               <Win32>
@@ -71,7 +74,7 @@
         </CompilerOptions>
       </Item2>
       <Item3 Name="Debug GTK">
-        <MacroValues Count="2">
+        <MacroValues Count="1">
           <Macro2 Name="LCLWidgetType" Value="gtk2"/>
         </MacroValues>
         <CompilerOptions>
@@ -107,7 +110,7 @@
         </CompilerOptions>
       </Item3>
       <Item4 Name="Release GTK">
-        <MacroValues Count="2">
+        <MacroValues Count="1">
           <Macro2 Name="LCLWidgetType" Value="gtk2"/>
         </MacroValues>
         <CompilerOptions>
@@ -125,6 +128,9 @@
             </Optimizations>
           </CodeGeneration>
           <Linking>
+            <Debugging>
+              <DebugInfoType Value="dsDwarf3"/>
+            </Debugging>
             <Options>
               <LinkerOptions Value="--pointer-arithmetic"/>
               <Win32>
@@ -247,28 +253,13 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="7">
+    <Exceptions Count="2">
       <Item1>
-        <Name Value="EAbort"/>
+        <Name Value="FPImageException"/>
       </Item1>
       <Item2>
-        <Name Value="ECodetoolError"/>
+        <Name Value="EInvalidGraphic"/>
       </Item2>
-      <Item3>
-        <Name Value="EFOpenError"/>
-      </Item3>
-      <Item4>
-        <Name Value="Unknown"/>
-      </Item4>
-      <Item5>
-        <Name Value="EHTTPClient"/>
-      </Item5>
-      <Item6>
-        <Name Value="FPImageException"/>
-      </Item6>
-      <Item7>
-        <Name Value="EProcess"/>
-      </Item7>
     </Exceptions>
   </Debugging>
 </CONFIG>

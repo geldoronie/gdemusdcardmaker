@@ -15,6 +15,13 @@
 # Editor / IDE local state
 src/gdemugui.lps
 
+# Build/IDE artifacts regenerados a cada build (logs do VSCode, i18n, resource).
+# .lpi e .lfm seguem tracked (são o projeto/form de verdade).
+.vscode/*.log
+languages/*.pot
+src/*.lrj
+src/gdemugui.res
+
 # Runtime-generated data (NOT the data/ assets, which are tracked)
 temp/*
 cache/*

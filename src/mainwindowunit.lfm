@@ -7,7 +7,8 @@ object MainWindow: TMainWindow
   ClientHeight = 796
   ClientWidth = 1523
   Menu = MainWindowMenu
-  LCLVersion = '4.2.0.0'
+  Position = poDesktopCenter
+  LCLVersion = '4.6.0.0'
   object LocalGamesToolsPanel: TPanel
     Left = 0
     Height = 796
@@ -236,8 +237,8 @@ object MainWindow: TMainWindow
         Top = 170
         Width = 154
         Caption = 'Download Cover'
+        TabOrder = 0
         OnClick = LocalGameDownloadCoverBitBtnClick
-        TabOrder = 1
       end
       object LocalGameNameLabel: TLabel
         Left = 173
@@ -605,8 +606,8 @@ object MainWindow: TMainWindow
         Top = 170
         Width = 154
         Caption = 'Download Cover'
+        TabOrder = 0
         OnClick = SDCardDownloadCoverBitBtnClick
-        TabOrder = 1
       end
       object SDCardGameDiscTypeLabel: TLabel
         Left = 173
