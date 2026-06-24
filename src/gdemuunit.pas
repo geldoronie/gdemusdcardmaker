@@ -405,6 +405,9 @@ begin
          GetMetaFileInfo(LocalGamesList[LocalGamesListCount]);
          CreateInfoCacheFile(LocalGamesList[LocalGamesListCount]);
          EnrichGameFromCatalog(LocalGamesList[LocalGamesListCount]);
+         // Tamanho do disco agora (ROM montado) p/ desempate offline depois.
+         LocalGamesList[LocalGamesListCount].DiscSize:=
+           LargestDiscFileSize(LocalGamesList[LocalGamesListCount].Path);
 
          LocalGamesListCount:=LocalGamesListCount + 1;
          CacheList.SaveToFile(ConcatPaths([ApplicationPath,'cache','cache.list']));
@@ -424,10 +427,10 @@ end;
 // Seguro chamar a qualquer momento; se uma das listas estiver vazia, só limpa as
 // marcas. Jogos sem Id (extração falhou) não são casados.
 procedure TGDEmu.MarkLocalGamesPresentOnSDCard;
-var i, j: integer;
+var i, j, idMatch: integer;
+    sizeKnown: Boolean;
 begin
-  // Garante o tamanho do maior arquivo do disco (desempata IP.BIN igual entre
-  // homebrews de mesmo template). Computado uma vez por jogo (lazy).
+  // Tamanho do maior arquivo do disco no cartão (sempre computável — está montado).
   for j:=0 to SDCardGamesListCount -1 do
     if (SDCardGamesList[j].DiscSize = 0) and (SDCardGamesList[j].Path <> '') then
       SDCardGamesList[j].DiscSize:=LargestDiscFileSize(SDCardGamesList[j].Path);
@@ -438,18 +441,31 @@ begin
     LocalGamesList[i].SDCardIndex:=0;
     if LocalGamesList[i].Id = '' then
       Continue;
+    // Tenta computar o tamanho do disco local — mas pode dar 0 se a coleção de
+    // ROMs estiver offline (caso comum: escaneou uma vez, depois trabalha só com
+    // a biblioteca + cartão). Nesse caso, casa só pelo Id (que está persistido).
     if LocalGamesList[i].DiscSize = 0 then
       LocalGamesList[i].DiscSize:=LargestDiscFileSize(LocalGamesList[i].Path);
+
+    idMatch:=-1;
     for j:=0 to SDCardGamesListCount -1 do
     begin
-      // Mesmo jogo = mesmo IP.BIN (Id) E mesmo tamanho do maior track/imagem.
-      if (SDCardGamesList[j].Id = LocalGamesList[i].Id) and
-         (SDCardGamesList[j].DiscSize = LocalGamesList[i].DiscSize) then
+      if SDCardGamesList[j].Id <> LocalGamesList[i].Id then
+        Continue;
+      // Id (MD5 do IP.BIN) bate. Se AMBOS os tamanhos são conhecidos, exige
+      // igualdade — isso desempata homebrews de mesmo IP.BIN (OpenBOR). Se algum
+      // tamanho é 0 (não computável), casa pelo Id apenas.
+      sizeKnown:=(LocalGamesList[i].DiscSize > 0) and (SDCardGamesList[j].DiscSize > 0);
+      if (not sizeKnown) or (SDCardGamesList[j].DiscSize = LocalGamesList[i].DiscSize) then
       begin
-        LocalGamesList[i].OnSDCard:=True;
-        LocalGamesList[i].SDCardIndex:=SDCardGamesList[j].Index;
-        Break;
+        idMatch:=j;
+        if sizeKnown then Break; // match forte (Id+tamanho): pode parar
       end;
+    end;
+    if idMatch >= 0 then
+    begin
+      LocalGamesList[i].OnSDCard:=True;
+      LocalGamesList[i].SDCardIndex:=SDCardGamesList[idMatch].Index;
     end;
   end;
 end;
