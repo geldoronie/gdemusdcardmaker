@@ -138,6 +138,7 @@ type
       function GetMetaFileInfo(game: TGDEmuGame): TGDEmuGame;
       function GetGameCover(game: TGDEmuGame): String;
       procedure ScrapeGameImages(game: TGDEmuGame);
+      function ResolveImageFile(game: TGDEmuGame; const aSuffix: String): String;
       function GetMetaFileInfoCache(game: TGDEmuGame): TGDEmuGame;
       function GetCommandLog: TStringList;
       procedure ClearCommandLog;
@@ -1982,13 +1983,73 @@ begin
   if (gm.SlugName <> '') and (Result.IndexOf(gm.SlugName) = -1) then Result.Add(gm.SlugName);
 end;
 
+// Resolve o arquivo de imagem (sufixo ''/'-title'/'-snap') de um jogo no cache:
+// primeiro pelo próprio slug; se faltar, por QUALQUER jogo (biblioteca ou SD) com
+// o mesmo Id (IP.BIN) — assim a imagem baixada na biblioteca é reaproveitada no SD
+// e vice-versa. Retorna o caminho existente ou ''.
+function TGDEmu.ResolveImageFile(game: TGDEmuGame; const aSuffix: String): String;
+
+  function CacheFileOf(g: TGDEmuGame): String;
+  begin
+    Result:=ConcatPaths([ApplicationPath,'cache', g.SlugName + aSuffix + '.png']);
+    if FileExists(Result) then Exit;
+    if aSuffix = '' then // boxart aceita .jpg legado
+    begin
+      Result:=ConcatPaths([ApplicationPath,'cache', g.SlugName + '.jpg']);
+      if FileExists(Result) then Exit;
+    end;
+    Result:='';
+  end;
+
+var i: integer;
+begin
+  Result:=CacheFileOf(game);
+  if (Result <> '') or (game.Id = '') then Exit;
+  for i:=0 to LocalGamesListCount -1 do
+    if (LocalGamesList[i].Id = game.Id) and (LocalGamesList[i] <> game) then
+    begin
+      Result:=CacheFileOf(LocalGamesList[i]);
+      if Result <> '' then Exit;
+    end;
+  for i:=0 to SDCardGamesListCount -1 do
+    if (SDCardGamesList[i].Id = game.Id) and (SDCardGamesList[i] <> game) then
+    begin
+      Result:=CacheFileOf(SDCardGamesList[i]);
+      if Result <> '' then Exit;
+    end;
+  Result:='';
+end;
+
 // Scraper: baixa, conforme a config (ScrapeBoxart/Title/Snap), as imagens
 // habilitadas para o jogo. Boxart=<slug>.png, Title=<slug>-title.png,
-// Snap=<slug>-snap.png. Respeita ScrapeOverwrite.
+// Snap=<slug>-snap.png. Respeita ScrapeOverwrite. Antes de baixar, reaproveita do
+// cache de outro jogo com o mesmo Id (imagem já baixada na biblioteca/SD).
 procedure TGDEmu.ScrapeGameImages(game: TGDEmuGame);
 var
   searchTerms: TStringList;
   best, cacheDir: String;
+  anyNeed: Boolean;
+
+  // Resolve um tipo só pelo cache (próprio ou reuso por Id). True = já resolvido.
+  function Satisfied(enabled: Boolean; const suffix: String): Boolean;
+  var f, reuse: String;
+  begin
+    Result:=True;
+    if not enabled then Exit;
+    f:=ConcatPaths([cacheDir, game.SlugName + suffix + '.png']);
+    if (not ScrapeOverwrite) and FileExists(f) then Exit;
+    if not ScrapeOverwrite then
+    begin
+      reuse:=ResolveImageFile(game, suffix);
+      if reuse <> '' then
+      begin
+        try FileUtil.CopyFile(reuse, f); except end;
+        AddCommandLog('Scraper reuso (mesmo Id)', ExtractFileName(f));
+        Exit;
+      end;
+    end;
+    Result:=False; // precisa baixar
+  end;
 
   procedure FetchType(enabled: Boolean; const namedDir, suffix: String);
   var f: String;
@@ -1996,15 +2057,22 @@ var
     if not enabled then Exit;
     f:=ConcatPaths([cacheDir, game.SlugName + suffix + '.png']);
     if (not ScrapeOverwrite) and FileExists(f) then Exit;
-    DownloadLibretroImage(best, namedDir, f);
+    if best <> '' then DownloadLibretroImage(best, namedDir, f);
   end;
 
 begin
   cacheDir:=ConcatPaths([ApplicationPath,'cache']);
+  // 1) Tenta resolver tudo pelo cache/reuso por Id (sem rede nem extrair metadados).
+  anyNeed:=False;
+  if not Satisfied(ScrapeBoxart, '') then anyNeed:=True;
+  if not Satisfied(ScrapeTitle, '-title') then anyNeed:=True;
+  if not Satisfied(ScrapeSnap, '-snap') then anyNeed:=True;
+  if not anyNeed then Exit;
+
+  // 2) Falta baixar algum: aí sim extrai metadados, casa no libretro e baixa.
   searchTerms:=BuildLibretroSearchTerms(game);
   try
     best:=MatchLibretroFilename(game, searchTerms);
-    if best = '' then Exit;
     FetchType(ScrapeBoxart, 'Named_Boxarts', '');
     FetchType(ScrapeTitle,  'Named_Titles',  '-title');
     FetchType(ScrapeSnap,   'Named_Snaps',   '-snap');

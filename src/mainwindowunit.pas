@@ -135,17 +135,11 @@ begin
   case t of 1: Result:='Tela de título'; 2: Result:='Screenshot'; else Result:='Capa'; end;
 end;
 
-// Caminho da imagem do tipo t no cache, ou '' se não existir. Boxart aceita .jpg legado.
+// Caminho da imagem do tipo t no cache, ou '' se não existir. Resolve pelo próprio
+// slug e, se faltar, por outro jogo com o mesmo Id (reaproveita biblioteca<->SD).
 function GameImageFileFor(game: TGDEmuGame; t: integer): String;
 begin
-  Result:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + CoverSuffix(t) + '.png']);
-  if FileExists(Result) then Exit;
-  if t = 0 then
-  begin
-    Result:=ConcatPaths([GDEmu.ApplicationPath,'cache',game.SlugName + '.jpg']);
-    if FileExists(Result) then Exit;
-  end;
-  Result:='';
+  Result:=GDEmu.ResolveImageFile(game, CoverSuffix(t));
 end;
 
 // Primeiro tipo com imagem (preferindo capa); 0 se nenhum (mostra o gd-rom padrão).
@@ -640,6 +634,14 @@ begin
   end;
 end;
 
+// Caminho da capa (thumbnail) do jogo: boxart própria ou de outro jogo com mesmo
+// Id; se não houver, o gd-rom padrão.
+function ThumbPathFor(game: TGDEmuGame): String;
+begin
+  Result:=GameImageFileFor(game, 0);
+  if Result = '' then Result:=ConcatPaths([GDEmu.ApplicationPath,'data','gdrom.png']);
+end;
+
 // Repopula a lista da biblioteca (esquerda) marcando com "✓ " os jogos que já
 // estão no SD Card (cruzamento por MD5 do IP.BIN feito em MarkLocalGamesPresentOnSDCard).
 procedure RefreshLocalGamesList;
@@ -664,7 +666,7 @@ begin
   begin
     g:=GDEmu.LocalGamesList[i];
     LibraryView.AddGame(g.Name, g.Genre, g.ReleaseYear, g.Developer,
-      MainWindow.GetCachedCoverImage(g), g.OnSDCard, CardsLabelFor(g));
+      ThumbPathFor(g), g.OnSDCard, CardsLabelFor(g));
   end;
   LibraryView.Invalidate;
 end;
@@ -689,7 +691,7 @@ begin
   begin
     g:=GDEmu.SDCardGamesList[i];
     SDCardView.AddGame(g.Name, g.Genre, g.ReleaseYear, g.Developer,
-      MainWindow.GetCachedCoverImage(g), False);
+      ThumbPathFor(g), False);
   end;
   SDCardView.Invalidate;
 end;
