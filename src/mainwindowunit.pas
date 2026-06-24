@@ -95,6 +95,7 @@ var
   LibraryView: TGameLibraryView = nil; // lista rica da biblioteca (substitui o TCheckListBox)
   SDCardView: TGameLibraryView = nil; // lista rica do SD Card (substitui o TCheckListBox)
   AutoDownloadCovers: Boolean = False; // preferência: baixar capas ao fim de cada scan
+  ToolButtonLeft: integer = 1000; // ordena os botões de toolbar criados em runtime
 
 procedure OnFinishGamesCopy;
 procedure OnFinishCoversDownload;
@@ -692,6 +693,55 @@ begin
   AddMenu(top, 'Créditos', @MainWindow.CreditsMenuItemClick);
 end;
 
+// Cria um botão de toolbar (ícone 24px de data/icons + Hint) no painel, à esquerda.
+procedure AddToolButton(panel: TWinControl; const icon, hint: String;
+  handler: TNotifyEvent);
+var b: TBitBtn; png: TPortableNetworkGraphic; p: String;
+begin
+  b:=TBitBtn.Create(MainWindow);
+  b.Parent:=panel;
+  b.Align:=alLeft;
+  // Left crescente só ordena o grupo alLeft: novos botões ficam depois dos
+  // existentes (que têm Left baixo) e entre si na ordem de criação.
+  b.Left:=ToolButtonLeft;
+  Inc(ToolButtonLeft, 50);
+  b.Width:=38;
+  b.Height:=40;
+  b.Hint:=hint;
+  b.ShowHint:=True;
+  p:=ConcatPaths([GDEmu.ApplicationPath,'data','icons',icon]);
+  if FileExists(p) then
+  begin
+    png:=TPortableNetworkGraphic.Create;
+    try
+      png.LoadFromFile(p);
+      b.Glyph.Assign(png);
+    finally
+      png.Free;
+    end;
+  end;
+  b.OnClick:=handler;
+end;
+
+// Adiciona, em runtime, os botões que espelham as ações de menu, em cada toolbar.
+procedure BuildToolbars;
+begin
+  // Biblioteca de Jogos (esquerda). Alinha o botão de pasta à esquerda p/ empacotar.
+  MainWindow.OpenLocalGamesDirectoriesDialogBitBtn.Align:=alLeft;
+  AddToolButton(MainWindow.LocalGamesToolsButtonsPanel, 'covers.png',
+    'Baixar capas da biblioteca', @MainWindow.DownloadAllCoversClick);
+
+  // SD Card (direita).
+  AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'eject.png',
+    'Fechar SD Card', @MainWindow.CloseSDCardClick);
+  AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'mark.png',
+    'Marcar jogos deste cartão na biblioteca', @MainWindow.TagCardGamesClick);
+  AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'rename.png',
+    'Renomear este cartão', @MainWindow.RenameCardClick);
+  AddToolButton(MainWindow.SDCardGamesToolsButtonsPanel, 'covers.png',
+    'Baixar capas do SD Card', @MainWindow.DownloadAllSDCoversClick);
+end;
+
 procedure LoadLibraryIntoUI;
 begin
   if GDEmu.LoadLibrary then
@@ -701,6 +751,7 @@ begin
   end;
   RefreshLocalGamesList; // sempre cria o LibraryView (vazio se não houver biblioteca)
   BuildMainMenu;         // menu reorganizado: Biblioteca vs SD Card explícitos
+  BuildToolbars;         // botões com ícones espelhando os menus
 end;
 
 procedure OnFinishSDCardGamesScan;
